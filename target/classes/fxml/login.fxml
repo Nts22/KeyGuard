@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<VBox xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.passmanager.controller.LoginController"
+      styleClass="login-container"
+      alignment="CENTER"
+      prefHeight="500" prefWidth="400">
+
+    <VBox styleClass="login-card" spacing="20" alignment="CENTER">
+
+        <!-- Logo/Título -->
+        <VBox alignment="CENTER" spacing="8">
+            <Text text="KeyGuard" styleClass="login-title"/>
+            <Label fx:id="subtitleLabel" text="Iniciar sesión" styleClass="login-subtitle"/>
+        </VBox>
+
+        <!-- Formulario -->
+        <VBox spacing="15">
+
+            <!-- Selección de usuario existente -->
+            <HBox fx:id="userSelectContainer" spacing="5" alignment="CENTER_LEFT">
+                <VBox spacing="5" HBox.hgrow="ALWAYS">
+                    <Label text="Usuario" styleClass="field-label"/>
+                    <ComboBox fx:id="userCombo" maxWidth="Infinity"/>
+                </VBox>
+            </HBox>
+
+            <!-- Campo de nuevo usuario (solo para registro) -->
+            <HBox fx:id="usernameContainer" spacing="5" visible="false" managed="false">
+                <VBox spacing="5" HBox.hgrow="ALWAYS">
+                    <Label text="Nombre de Usuario" styleClass="field-label"/>
+                    <TextField fx:id="usernameField" promptText="Ingresa un nombre de usuario"/>
+                </VBox>
+            </HBox>
+
+            <VBox spacing="5">
+                <Label text="Contraseña" styleClass="field-label"/>
+                <PasswordField fx:id="passwordField" promptText="Ingresa tu contraseña"/>
+            </VBox>
+
+            <!-- Campo de confirmación (solo para registro) -->
+            <VBox fx:id="confirmContainer" spacing="5" visible="false" managed="false">
+                <Label text="Confirmar Contraseña" styleClass="field-label"/>
+                <PasswordField fx:id="confirmPasswordField" promptText="Confirma tu contraseña"/>
+            </VBox>
+
+            <!-- Mensaje de error -->
+            <Label fx:id="errorLabel" styleClass="error-label" visible="false"/>
+        </VBox>
+
+        <!-- Botones -->
+        <VBox spacing="10" alignment="CENTER">
+            <Button fx:id="submitButton" text="Entrar" onAction="#handleSubmit"
+                    styleClass="login-btn-primary" prefWidth="280" prefHeight="40"/>
+            <Button fx:id="toggleModeButton" text="Crear nuevo usuario" onAction="#handleToggleMode"
+                    styleClass="login-btn-secondary" prefWidth="280" prefHeight="40"/>
+        </VBox>
+
+    </VBox>
+</VBox>
