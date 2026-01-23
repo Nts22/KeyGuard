@@ -7,6 +7,7 @@ import com.passmanager.repository.UserRepository;
 import com.passmanager.service.AuthService;
 import com.passmanager.service.EncryptionService;
 import com.passmanager.service.LoginAttemptService;
+import com.passmanager.service.RecoveryKeyService;
 import com.passmanager.service.UserService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,15 +22,18 @@ public class AuthServiceImpl implements AuthService {
     private final UserService userService;
     private final EncryptionService encryptionService;
     private final LoginAttemptService loginAttemptService;
+    private final RecoveryKeyService recoveryKeyService;
 
     public AuthServiceImpl(UserRepository userRepository,
                            UserService userService,
                            EncryptionService encryptionService,
-                           LoginAttemptService loginAttemptService) {
+                           LoginAttemptService loginAttemptService,
+                           RecoveryKeyService recoveryKeyService) {
         this.userRepository = userRepository;
         this.userService = userService;
         this.encryptionService = encryptionService;
         this.loginAttemptService = loginAttemptService;
+        this.recoveryKeyService = recoveryKeyService;
     }
 
     @Override
@@ -44,7 +48,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public User createUser(String username, String password) {
+    public UserCreationResult createUser(String username, String password) {
         if (userRepository.existsByUsername(username)) {
             throw new AuthenticationException("El usuario ya existe: " + username);
         }
@@ -56,10 +60,17 @@ public class AuthServiceImpl implements AuthService {
         String salt = encryptionService.generateSalt();
         String hash = encryptionService.hashPassword(password, salt);
 
+        // Generar recovery key
+        String recoveryKey = recoveryKeyService.generateRecoveryKey();
+        String recoveryKeyHash = recoveryKeyService.hashRecoveryKey(recoveryKey);
+        String encryptedMasterPassword = recoveryKeyService.encryptMasterPassword(password, recoveryKey);
+
         User user = User.builder()
                 .username(username)
                 .passwordHash(hash)
                 .salt(salt)
+                .recoveryKeyHash(recoveryKeyHash)
+                .encryptedMasterPassword(encryptedMasterPassword)
                 .build();
 
         user = userRepository.save(user);
@@ -67,7 +78,7 @@ public class AuthServiceImpl implements AuthService {
         encryptionService.deriveKey(password, salt);
         userService.setCurrentUser(user);
 
-        return user;
+        return new UserCreationResult(user, recoveryKey);
     }
 
     @Override
@@ -101,6 +112,61 @@ public class AuthServiceImpl implements AuthService {
         }
 
         return valid;
+    }
+
+    @Override
+    @Transactional
+    public boolean recoverAccount(String username, String recoveryKey, String newPassword) {
+        // Buscar usuario
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AuthenticationException("Usuario no encontrado"));
+
+        // Verificar que el usuario tenga recovery key configurada
+        if (user.getRecoveryKeyHash() == null || user.getEncryptedMasterPassword() == null) {
+            throw new AuthenticationException("Este usuario no tiene configurada una recovery key");
+        }
+
+        // Verificar recovery key
+        if (!recoveryKeyService.verifyRecoveryKey(recoveryKey, user.getRecoveryKeyHash())) {
+            throw new AuthenticationException("Recovery key inválida");
+        }
+
+        // Validar nueva contraseña
+        if (newPassword.length() < 8) {
+            throw new AuthenticationException("La nueva contraseña debe tener al menos 8 caracteres");
+        }
+
+        // Descifrar contraseña maestra original (para re-cifrar las contraseñas guardadas)
+        String originalMasterPassword = recoveryKeyService.decryptMasterPassword(
+            user.getEncryptedMasterPassword(),
+            recoveryKey
+        );
+
+        // Generar nuevo salt y hash para la nueva contraseña
+        String newSalt = encryptionService.generateSalt();
+        String newHash = encryptionService.hashPassword(newPassword, newSalt);
+
+        // Generar nueva recovery key
+        String newRecoveryKey = recoveryKeyService.generateRecoveryKey();
+        String newRecoveryKeyHash = recoveryKeyService.hashRecoveryKey(newRecoveryKey);
+        String newEncryptedMasterPassword = recoveryKeyService.encryptMasterPassword(newPassword, newRecoveryKey);
+
+        // Actualizar usuario
+        user.setPasswordHash(newHash);
+        user.setSalt(newSalt);
+        user.setRecoveryKeyHash(newRecoveryKeyHash);
+        user.setEncryptedMasterPassword(newEncryptedMasterPassword);
+        user.setLastLoginAt(LocalDateTime.now());
+        userRepository.save(user);
+
+        // Derivar clave y establecer usuario actual
+        encryptionService.deriveKey(newPassword, newSalt);
+        userService.setCurrentUser(user);
+
+        // Limpiar intentos de login fallidos
+        loginAttemptService.loginSucceeded(username);
+
+        return true;
     }
 
     @Override
