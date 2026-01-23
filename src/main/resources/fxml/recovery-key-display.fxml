@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.passmanager.controller.RecoveryKeyDisplayController"
+      alignment="CENTER"
+      spacing="20"
+      styleClass="root-container"
+      prefWidth="600"
+      prefHeight="500">
+
+    <padding>
+        <Insets top="40" right="40" bottom="40" left="40"/>
+    </padding>
+
+    <!-- Título -->
+    <Label text=" Guarda tu Clave de Recuperación" styleClass="title-label"/>
+
+    <!-- Subtítulo -->
+    <VBox alignment="CENTER" spacing="10">
+        <Label text="Si olvidas tu contraseña maestra, necesitarás esta clave" styleClass="subtitle-label" wrapText="true" textAlignment="CENTER"/>
+        <Label text="para recuperar el acceso a tus contraseñas." styleClass="subtitle-label" wrapText="true" textAlignment="CENTER"/>
+    </VBox>
+
+    <!-- Recovery Key Display -->
+    <VBox alignment="CENTER" spacing="15" style="-fx-background-color: #f8f9fa; -fx-background-radius: 10; -fx-border-color: #dee2e6; -fx-border-radius: 10; -fx-border-width: 2;">
+        <padding>
+            <Insets top="20" right="20" bottom="20" left="20"/>
+        </padding>
+
+        <Label text="Tu Clave de Recuperación:" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+
+        <TextField fx:id="recoveryKeyField"
+                   editable="false"
+                   alignment="CENTER"
+                   style="-fx-font-size: 18px; -fx-font-family: 'Courier New', monospace; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"
+                   prefWidth="500"/>
+
+        <Button fx:id="copyButton" text="📋 Copiar al Portapapeles" onAction="#handleCopy" styleClass="button-secondary"/>
+    </VBox>
+
+    <!-- Advertencias -->
+    <VBox spacing="10" style="-fx-background-color: #fff3cd; -fx-background-radius: 8; -fx-border-color: #ffc107; -fx-border-radius: 8; -fx-border-width: 1;">
+        <padding>
+            <Insets top="15" right="15" bottom="15" left="15"/>
+        </padding>
+
+        <Label text="⚠️ IMPORTANTE:" style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #856404;"/>
+
+        <Text text="• Guarda esta clave en un lugar seguro (papel, USB, gestor de archivos)"
+              style="-fx-font-size: 12px; -fx-fill: #856404;" wrappingWidth="500"/>
+
+        <Text text="• KeyGuard usa cifrado de grado militar - si pierdes TANTO tu contraseña maestra como esta clave, no podremos ayudarte"
+              style="-fx-font-size: 12px; -fx-fill: #856404;" wrappingWidth="500"/>
+
+        <Text text="• Esta clave solo se mostrará UNA VEZ"
+              style="-fx-font-size: 12px; -fx-fill: #856404; -fx-font-weight: bold;" wrappingWidth="500"/>
+    </VBox>
+
+    <!-- Confirmación -->
+    <CheckBox fx:id="confirmCheckbox" text="Ya guardé mi clave de forma segura" style="-fx-font-size: 13px; -fx-font-weight: bold;"/>
+
+    <!-- Mensaje de error -->
+    <Label fx:id="errorLabel" styleClass="error-label" visible="false" managed="false"/>
+
+    <!-- Botón continuar -->
+    <Button fx:id="continueButton" text="Continuar" onAction="#handleContinue" styleClass="button-primary" prefWidth="200" defaultButton="true"/>
+
+    <Region VBox.vgrow="ALWAYS"/>
+
+</VBox>

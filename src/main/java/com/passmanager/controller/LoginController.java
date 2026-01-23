@@ -35,6 +35,7 @@ public class LoginController implements Initializable {
     @FXML private Label errorLabel;
     @FXML private Button submitButton;
     @FXML private Button toggleModeButton;
+    @FXML private Button forgotPasswordButton;
 
     private final AuthService authService;
     private final CategoryService categoryService;
@@ -105,6 +106,7 @@ public class LoginController implements Initializable {
         showElement(userSelectContainer);
         hideElement(usernameContainer);
         hideElement(confirmContainer);
+        showElement(forgotPasswordButton);
     }
 
     private void setupRegisterMode() {
@@ -118,6 +120,7 @@ public class LoginController implements Initializable {
         hideElement(userSelectContainer);
         showElement(usernameContainer);
         showElement(confirmContainer);
+        hideElement(forgotPasswordButton);
     }
 
     @FXML
@@ -174,9 +177,8 @@ public class LoginController implements Initializable {
         }
 
         try {
-            authService.createUser(username, password);
-            categoryService.initDefaultCategories();
-            navigateToMain();
+            AuthService.UserCreationResult result = authService.createUser(username, password);
+            navigateToRecoveryKeyDisplay(result.getRecoveryKey());
         } catch (Exception e) {
             showError(e.getMessage());
         }
@@ -222,6 +224,12 @@ public class LoginController implements Initializable {
         }
     }
 
+    @FXML
+    private void handleForgotPassword() {
+        hideError();
+        navigateToPasswordRecovery();
+    }
+
     private void navigateToMain() {
         try {
             Parent mainView = fxmlLoaderUtil.loadFxml("/fxml/main.fxml");
@@ -236,6 +244,48 @@ public class LoginController implements Initializable {
             stage.centerOnScreen();
         } catch (Exception e) {
             showError("Error al cargar la pantalla principal: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void navigateToRecoveryKeyDisplay(String recoveryKey) {
+        try {
+            javafx.fxml.FXMLLoader loader = fxmlLoaderUtil.getLoader("/fxml/recovery-key-display.fxml");
+            Parent recoveryView = loader.load();
+
+            // Obtener el controlador y establecer la recovery key
+            RecoveryKeyDisplayController controller = loader.getController();
+            controller.setRecoveryKey(recoveryKey);
+
+            Scene scene = new Scene(recoveryView);
+            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+
+            Stage stage = (Stage) passwordField.getScene().getWindow();
+            stage.setScene(scene);
+            stage.setTitle(AppConfig.APP_NAME + " - Clave de Recuperación");
+            stage.setResizable(false);
+            stage.sizeToScene();
+            stage.centerOnScreen();
+        } catch (Exception e) {
+            showError("Error al mostrar la clave de recuperación: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void navigateToPasswordRecovery() {
+        try {
+            Parent recoveryView = fxmlLoaderUtil.loadFxml("/fxml/password-recovery.fxml");
+            Scene scene = new Scene(recoveryView);
+            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+
+            Stage stage = (Stage) passwordField.getScene().getWindow();
+            stage.setScene(scene);
+            stage.setTitle(AppConfig.APP_NAME + " - Recuperar Cuenta");
+            stage.setResizable(false);
+            stage.sizeToScene();
+            stage.centerOnScreen();
+        } catch (Exception e) {
+            showError("Error al cargar la pantalla de recuperación: " + e.getMessage());
             e.printStackTrace();
         }
     }

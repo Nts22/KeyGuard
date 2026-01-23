@@ -60,6 +60,9 @@
                     styleClass="login-btn-primary" prefWidth="280" prefHeight="40"/>
             <Button fx:id="toggleModeButton" text="Crear nuevo usuario" onAction="#handleToggleMode"
                     styleClass="login-btn-secondary" prefWidth="280" prefHeight="40"/>
+            <Button fx:id="forgotPasswordButton" text="Olvidé mi contraseña" onAction="#handleForgotPassword"
+                    style="-fx-background-color: transparent; -fx-text-fill: #6c757d; -fx-underline: true; -fx-cursor: hand;"
+                    prefWidth="280" visible="true" managed="true"/>
         </VBox>
 
     </VBox>

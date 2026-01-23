@@ -32,6 +32,12 @@ public class User {
     @Column(nullable = false)
     private String salt;
 
+    @Column(columnDefinition = "TEXT")
+    private String recoveryKeyHash;
+
+    @Column(columnDefinition = "TEXT")
+    private String encryptedMasterPassword;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<PasswordEntry> passwordEntries = new ArrayList<>();

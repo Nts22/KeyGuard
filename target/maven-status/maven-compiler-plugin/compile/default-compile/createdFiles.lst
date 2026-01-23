@@ -1,6 +1,7 @@
 com/passmanager/repository/CategoryRepository.class
 com/passmanager/util/ClipboardUtil.class
 com/passmanager/model/dto/PasswordEntryDTO$CustomFieldDTO.class
+com/passmanager/controller/PasswordRecoveryController$1.class
 com/passmanager/model/entity/User.class
 com/passmanager/controller/PasswordFormController$CustomFieldRow.class
 com/passmanager/service/impl/EncryptionServiceImpl.class
@@ -26,12 +27,14 @@ com/passmanager/service/PasswordGeneratorService.class
 com/passmanager/controller/PasswordDetailController.class
 com/passmanager/service/impl/PasswordEntryServiceImpl.class
 com/passmanager/service/PasswordEntryService.class
+com/passmanager/service/RecoveryKeyService.class
 com/passmanager/model/entity/User$UserBuilder.class
 com/passmanager/controller/LoginController.class
 com/passmanager/mapper/PasswordEntryMapper.class
 com/passmanager/mapper/CategoryMapper.class
 com/passmanager/service/impl/CategoryServiceImpl.class
 com/passmanager/service/impl/LoginAttemptServiceImpl.class
+com/passmanager/service/impl/RecoveryKeyServiceImpl.class
 com/passmanager/repository/CustomFieldRepository.class
 com/passmanager/config/JavaFxConfig.class
 com/passmanager/service/impl/UserServiceImpl.class
@@ -54,9 +57,12 @@ com/passmanager/exception/EncryptionException.class
 com/passmanager/config/AppConfig.class
 com/passmanager/model/entity/Category.class
 com/passmanager/util/DialogUtil.class
+com/passmanager/controller/RecoveryKeyDisplayController.class
 com/passmanager/model/dto/CategoryDTO$CategoryDTOBuilder.class
 com/passmanager/controller/CategoryFormController.class
+com/passmanager/controller/PasswordRecoveryController.class
 com/passmanager/model/dto/UserDTO$UserDTOBuilder.class
+com/passmanager/service/AuthService$UserCreationResult.class
 com/passmanager/exception/ResourceNotFoundException.class
 com/passmanager/controller/MainController.class
 com/passmanager/util/PasswordGeneratorUtil.class
