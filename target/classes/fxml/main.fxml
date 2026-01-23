@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/17"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.passmanager.controller.MainController"
+            styleClass="main-container"
+            prefHeight="920" prefWidth="1100">
+
+    <!-- Sidebar colapsable -->
+    <left>
+        <HBox>
+            <!-- Botón para colapsar/expandir -->
+            <VBox styleClass="sidebar-toggle-container">
+                <Button fx:id="toggleSidebarBtn" text="☰" styleClass="sidebar-toggle-btn"
+                        onAction="#handleToggleSidebar"/>
+            </VBox>
+
+            <!-- Sidebar principal -->
+            <VBox fx:id="sidebar" styleClass="sidebar">
+                <!-- Usuario actual -->
+                <HBox alignment="CENTER_LEFT" spacing="12" styleClass="user-info">
+                    <StackPane styleClass="user-avatar">
+                        <Label fx:id="userInitialsLabel" text="U" styleClass="user-initials"/>
+                    </StackPane>
+                    <VBox spacing="2">
+                        <Label fx:id="currentUserLabel" text="Usuario" styleClass="user-name"/>
+                        <Label text="Sesión activa" styleClass="user-status"/>
+                    </VBox>
+                </HBox>
+
+                <Separator style="-fx-background-color: #334155;"/>
+
+                <Label text="Categorías" styleClass="sidebar-title"/>
+
+                <Button fx:id="allCategoriesBtn" text="Todas"
+                        styleClass="category-item, category-item-selected"
+                        onAction="#handleAllCategories" maxWidth="Infinity"/>
+
+                <VBox fx:id="categoriesContainer" spacing="0">
+                    <!-- Las categorías se cargan dinámicamente -->
+                </VBox>
+
+                <Region VBox.vgrow="ALWAYS"/>
+
+                <Button text="+ Nueva Categoría" styleClass="category-item"
+                        onAction="#handleNewCategory" maxWidth="Infinity"/>
+
+                <Separator style="-fx-background-color: #334155;"/>
+
+                <Button text="Cerrar Sesión" styleClass="category-item"
+                        onAction="#handleLogout" maxWidth="Infinity"
+                        style="-fx-text-fill: #f87171;"/>
+
+                <Button text="Salir" styleClass="category-item"
+                        onAction="#handleExit" maxWidth="Infinity"
+                        style="-fx-text-fill: #94a3b8;">
+                    <VBox.margin>
+                        <Insets bottom="20"/>
+                    </VBox.margin>
+                </Button>
+            </VBox>
+        </HBox>
+    </left>
+
+    <!-- Contenido principal -->
+    <center>
+        <VBox spacing="20">
+            <padding>
+                <Insets topRightBottomLeft="20"/>
+            </padding>
+
+            <!-- Barra superior -->
+            <HBox spacing="15" alignment="CENTER_LEFT">
+                <TextField fx:id="searchField" promptText="Buscar contraseñas..."
+                           styleClass="search-field" onKeyReleased="#handleSearch"/>
+
+                <Region HBox.hgrow="ALWAYS"/>
+
+                <Button text="+ Nueva Entrada" onAction="#handleNewEntry"/>
+            </HBox>
+
+            <!-- Tabla de contraseñas - altura fija para 20 filas -->
+            <TableView fx:id="passwordTable" prefHeight="720" minHeight="720" maxHeight="720" fixedCellSize="33">
+                <columns>
+                    <TableColumn fx:id="titleColumn" text="Título"/>
+                    <TableColumn fx:id="usernameColumn" text="Usuario"/>
+                    <TableColumn fx:id="emailColumn" text="Email"/>
+                    <TableColumn fx:id="categoryColumn" text="Categoría"/>
+                    <TableColumn fx:id="actionsColumn" text="Acciones"/>
+                </columns>
+                <placeholder>
+                    <Label text="No hay contraseñas guardadas"/>
+                </placeholder>
+            </TableView>
+
+            <!-- Paginación -->
+            <Pagination fx:id="pagination" pageCount="1"/>
+        </VBox>
+    </center>
+</BorderPane>
