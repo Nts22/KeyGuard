@@ -41,13 +41,25 @@
 
             <VBox spacing="5">
                 <Label text="Contraseña" styleClass="field-label"/>
-                <PasswordField fx:id="passwordField" promptText="Ingresa tu contraseña"/>
+                <HBox spacing="5" alignment="CENTER_LEFT">
+                    <PasswordField fx:id="passwordField" promptText="Ingresa tu contraseña" HBox.hgrow="ALWAYS"/>
+                    <TextField fx:id="passwordVisibleField" promptText="Ingresa tu contraseña"
+                               visible="false" managed="false" HBox.hgrow="ALWAYS"/>
+                    <Button fx:id="togglePasswordButton" text="👁" onAction="#handleTogglePasswordVisibility"
+                            style="-fx-background-color: #eff6ff; -fx-text-fill: #2563eb; -fx-cursor: hand; -fx-font-size: 20px; -fx-padding: 8; -fx-background-radius: 10;"/>
+                </HBox>
             </VBox>
 
             <!-- Campo de confirmación (solo para registro) -->
             <VBox fx:id="confirmContainer" spacing="5" visible="false" managed="false">
                 <Label text="Confirmar Contraseña" styleClass="field-label"/>
-                <PasswordField fx:id="confirmPasswordField" promptText="Confirma tu contraseña"/>
+                <HBox spacing="5" alignment="CENTER_LEFT">
+                    <PasswordField fx:id="confirmPasswordField" promptText="Confirma tu contraseña" HBox.hgrow="ALWAYS"/>
+                    <TextField fx:id="confirmVisibleField" promptText="Confirma tu contraseña"
+                               visible="false" managed="false" HBox.hgrow="ALWAYS"/>
+                    <Button fx:id="toggleConfirmButton" text="👁" onAction="#handleToggleConfirmVisibility"
+                            style="-fx-background-color: #eff6ff; -fx-text-fill: #2563eb; -fx-cursor: hand; -fx-font-size: 20px; -fx-padding: 8; -fx-background-radius: 10;"/>
+                </HBox>
             </VBox>
 
             <!-- Mensaje de error -->

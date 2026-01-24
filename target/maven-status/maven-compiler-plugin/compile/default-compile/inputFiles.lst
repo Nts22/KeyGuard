@@ -8,6 +8,7 @@
 /home/ptirado/password-manager/src/main/java/com/passmanager/service/impl/PasswordGeneratorServiceImpl.java
 /home/ptirado/password-manager/src/main/java/com/passmanager/model/dto/CategoryDTO.java
 /home/ptirado/password-manager/src/main/java/com/passmanager/repository/CustomFieldRepository.java
+/home/ptirado/password-manager/src/main/java/com/passmanager/service/impl/InactivityServiceImpl.java
 /home/ptirado/password-manager/src/main/java/com/passmanager/util/PasswordGeneratorUtil.java
 /home/ptirado/password-manager/src/main/java/com/passmanager/mapper/CategoryMapper.java
 /home/ptirado/password-manager/src/main/java/com/passmanager/mapper/PasswordEntryMapper.java
@@ -32,6 +33,7 @@
 /home/ptirado/password-manager/src/main/java/com/passmanager/exception/ResourceNotFoundException.java
 /home/ptirado/password-manager/src/main/java/com/passmanager/service/UserService.java
 /home/ptirado/password-manager/src/main/java/com/passmanager/repository/PasswordEntryRepository.java
+/home/ptirado/password-manager/src/main/java/com/passmanager/service/InactivityService.java
 /home/ptirado/password-manager/src/main/java/com/passmanager/config/DatabaseInitializer.java
 /home/ptirado/password-manager/src/main/java/com/passmanager/service/impl/CategoryServiceImpl.java
 /home/ptirado/password-manager/src/main/java/com/passmanager/config/LocalDateTimeConverter.java
