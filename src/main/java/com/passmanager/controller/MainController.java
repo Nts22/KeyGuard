@@ -315,7 +315,16 @@ public class MainController implements Initializable {
 
         int pageCount = (int) Math.ceil((double) allPasswords.size() / ITEMS_PER_PAGE);
         pagination.setPageCount(Math.max(1, pageCount));
-        pagination.setCurrentPageIndex(0);
+
+        // Forzar actualización de la tabla
+        int currentPage = pagination.getCurrentPageIndex();
+        if (currentPage == 0) {
+            // Si ya estamos en página 0, forzar refresh manualmente
+            createPage(0);
+        } else {
+            // Si estamos en otra página, ir a página 0 (esto dispara el callback automáticamente)
+            pagination.setCurrentPageIndex(0);
+        }
     }
 
     @FXML
