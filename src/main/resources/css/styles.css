@@ -5,12 +5,12 @@
 
 .card {
     -fx-background-color: #ffffff;
-    -fx-background-radius: 8;
-    -fx-border-radius: 8;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
     -fx-border-color: #e2e8f0;
     -fx-border-width: 1;
     -fx-padding: 20;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 4, 0, 0, 2);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 6, 0, 0, 2);
 }
 
 /* Títulos */
@@ -29,8 +29,8 @@
 .text-field, .password-field, .text-area {
     -fx-background-color: #ffffff;
     -fx-border-color: #e2e8f0;
-    -fx-border-radius: 6;
-    -fx-background-radius: 6;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
     -fx-padding: 10 12;
     -fx-font-size: 14px;
 }
@@ -63,7 +63,7 @@
     -fx-font-size: 14px;
     -fx-font-weight: bold;
     -fx-padding: 10 20;
-    -fx-background-radius: 6;
+    -fx-background-radius: 10;
     -fx-cursor: hand;
 }
 
@@ -75,8 +75,8 @@
     -fx-background-color: transparent;
     -fx-text-fill: #2563eb;
     -fx-border-color: #2563eb;
-    -fx-border-radius: 6;
-    -fx-background-radius: 6;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
 }
 
 .button-secondary:hover {
@@ -264,6 +264,8 @@
 .table-view {
     -fx-background-color: #ffffff;
     -fx-border-color: #e2e8f0;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
 }
 
 .table-view .column-header {
@@ -298,8 +300,8 @@
 .combo-box {
     -fx-background-color: #ffffff;
     -fx-border-color: #e2e8f0;
-    -fx-border-radius: 6;
-    -fx-background-radius: 6;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
     -fx-padding: 8 12;
 }
 
@@ -381,7 +383,7 @@
     -fx-text-fill: white;
     -fx-font-size: 14px;
     -fx-font-weight: bold;
-    -fx-background-radius: 8;
+    -fx-background-radius: 12;
     -fx-cursor: hand;
 }
 
@@ -396,8 +398,8 @@
     -fx-font-weight: bold;
     -fx-border-color: #2563eb;
     -fx-border-width: 2;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
     -fx-cursor: hand;
 }
 

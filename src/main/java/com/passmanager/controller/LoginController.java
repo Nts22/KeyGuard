@@ -27,7 +27,9 @@ public class LoginController implements Initializable {
     @FXML private ComboBox<UserDTO> userCombo;
     @FXML private TextField usernameField;
     @FXML private PasswordField passwordField;
+    @FXML private TextField passwordVisibleField;
     @FXML private PasswordField confirmPasswordField;
+    @FXML private TextField confirmVisibleField;
     @FXML private VBox confirmContainer;
     @FXML private HBox usernameContainer;
     @FXML private HBox userSelectContainer;
@@ -36,6 +38,8 @@ public class LoginController implements Initializable {
     @FXML private Button submitButton;
     @FXML private Button toggleModeButton;
     @FXML private Button forgotPasswordButton;
+    @FXML private Button togglePasswordButton;
+    @FXML private Button toggleConfirmButton;
 
     private final AuthService authService;
     private final CategoryService categoryService;
@@ -148,8 +152,8 @@ public class LoginController implements Initializable {
 
     private void handleRegister() {
         String username = usernameField.getText().trim();
-        String password = passwordField.getText();
-        String confirm = confirmPasswordField.getText();
+        String password = getPasswordValue();
+        String confirm = getConfirmPasswordValue();
 
         if (username.isEmpty()) {
             showError("Ingresa un nombre de usuario");
@@ -186,7 +190,7 @@ public class LoginController implements Initializable {
 
     private void handleLogin() {
         UserDTO selectedUser = userCombo.getValue();
-        String password = passwordField.getText();
+        String password = getPasswordValue();
 
         if (selectedUser == null) {
             showError("Selecciona un usuario");
@@ -218,6 +222,7 @@ public class LoginController implements Initializable {
                     showError("Cuenta bloqueada por demasiados intentos fallidos.");
                 }
                 passwordField.clear();
+                passwordVisibleField.clear();
             }
         } catch (Exception e) {
             showError(e.getMessage());
@@ -228,6 +233,48 @@ public class LoginController implements Initializable {
     private void handleForgotPassword() {
         hideError();
         navigateToPasswordRecovery();
+    }
+
+    @FXML
+    private void handleTogglePasswordVisibility() {
+        if (passwordField.isVisible()) {
+            // Cambiar a TextField visible
+            passwordVisibleField.setText(passwordField.getText());
+            passwordField.setVisible(false);
+            passwordField.setManaged(false);
+            passwordVisibleField.setVisible(true);
+            passwordVisibleField.setManaged(true);
+            togglePasswordButton.setText("👁️‍🗨️");
+        } else {
+            // Cambiar a PasswordField oculto
+            passwordField.setText(passwordVisibleField.getText());
+            passwordVisibleField.setVisible(false);
+            passwordVisibleField.setManaged(false);
+            passwordField.setVisible(true);
+            passwordField.setManaged(true);
+            togglePasswordButton.setText("👁");
+        }
+    }
+
+    @FXML
+    private void handleToggleConfirmVisibility() {
+        if (confirmPasswordField.isVisible()) {
+            // Cambiar a TextField visible
+            confirmVisibleField.setText(confirmPasswordField.getText());
+            confirmPasswordField.setVisible(false);
+            confirmPasswordField.setManaged(false);
+            confirmVisibleField.setVisible(true);
+            confirmVisibleField.setManaged(true);
+            toggleConfirmButton.setText("👁️‍🗨️");
+        } else {
+            // Cambiar a PasswordField oculto
+            confirmPasswordField.setText(confirmVisibleField.getText());
+            confirmVisibleField.setVisible(false);
+            confirmVisibleField.setManaged(false);
+            confirmPasswordField.setVisible(true);
+            confirmPasswordField.setManaged(true);
+            toggleConfirmButton.setText("👁");
+        }
     }
 
     private void navigateToMain() {
@@ -302,7 +349,9 @@ public class LoginController implements Initializable {
     private void clearFields() {
         if (usernameField != null) usernameField.clear();
         passwordField.clear();
+        passwordVisibleField.clear();
         if (confirmPasswordField != null) confirmPasswordField.clear();
+        if (confirmVisibleField != null) confirmVisibleField.clear();
     }
 
     private void showElement(javafx.scene.Node node) {
@@ -317,5 +366,13 @@ public class LoginController implements Initializable {
             node.setVisible(false);
             node.setManaged(false);
         }
+    }
+
+    private String getPasswordValue() {
+        return passwordField.isVisible() ? passwordField.getText() : passwordVisibleField.getText();
+    }
+
+    private String getConfirmPasswordValue() {
+        return confirmPasswordField.isVisible() ? confirmPasswordField.getText() : confirmVisibleField.getText();
     }
 }

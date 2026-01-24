@@ -51,6 +51,9 @@ com/passmanager/service/LoginAttemptService.class
 com/passmanager/model/dto/CategoryDTO.class
 com/passmanager/model/dto/PasswordEntryDTO$PasswordEntryDTOBuilder.class
 com/passmanager/util/FxmlLoaderUtil.class
+com/passmanager/service/InactivityService.class
+com/passmanager/service/impl/InactivityServiceImpl.class
+com/passmanager/service/impl/InactivityServiceImpl$1.class
 com/passmanager/controller/MainController$1.class
 com/passmanager/SpringBootApp.class
 com/passmanager/exception/EncryptionException.class

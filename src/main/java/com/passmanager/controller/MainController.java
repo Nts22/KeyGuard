@@ -58,6 +58,7 @@ public class MainController implements Initializable {
     private final ClipboardUtil clipboardUtil;
     private final DialogUtil dialogUtil;
     private final FxmlLoaderUtil fxmlLoaderUtil;
+    private final com.passmanager.service.InactivityService inactivityService;
 
     private ObservableList<PasswordEntryDTO> passwordList = FXCollections.observableArrayList();
     private List<PasswordEntryDTO> allPasswords = new ArrayList<>();
@@ -68,13 +69,15 @@ public class MainController implements Initializable {
                           AuthService authService,
                           ClipboardUtil clipboardUtil,
                           DialogUtil dialogUtil,
-                          FxmlLoaderUtil fxmlLoaderUtil) {
+                          FxmlLoaderUtil fxmlLoaderUtil,
+                          com.passmanager.service.InactivityService inactivityService) {
         this.passwordEntryService = passwordEntryService;
         this.categoryService = categoryService;
         this.authService = authService;
         this.clipboardUtil = clipboardUtil;
         this.dialogUtil = dialogUtil;
         this.fxmlLoaderUtil = fxmlLoaderUtil;
+        this.inactivityService = inactivityService;
     }
 
     @Override
@@ -84,6 +87,7 @@ public class MainController implements Initializable {
         setupPagination();
         loadCategories();
         loadPasswords();
+        setupInactivityMonitoring();
     }
 
     private void loadCurrentUser() {
@@ -491,6 +495,9 @@ public class MainController implements Initializable {
 
         if (confirmed) {
             try {
+                // Detener monitoreo de inactividad
+                inactivityService.stopMonitoring();
+
                 authService.logout();
 
                 FXMLLoader loader = fxmlLoaderUtil.getLoader("/fxml/login.fxml");
@@ -521,5 +528,57 @@ public class MainController implements Initializable {
         if (confirmed) {
             javafx.application.Platform.exit();
         }
+    }
+
+    private void setupInactivityMonitoring() {
+        // Iniciar monitoreo de inactividad
+        inactivityService.startMonitoring(this::handleInactivityLogout);
+
+        // Agregar listeners para eventos de actividad en la escena
+        javafx.application.Platform.runLater(() -> {
+            if (passwordTable.getScene() != null) {
+                // Resetear timer en cualquier evento de mouse o teclado
+                passwordTable.getScene().setOnMouseMoved(event -> inactivityService.resetTimer());
+                passwordTable.getScene().setOnMousePressed(event -> inactivityService.resetTimer());
+                passwordTable.getScene().setOnMouseClicked(event -> inactivityService.resetTimer());
+                passwordTable.getScene().setOnKeyPressed(event -> inactivityService.resetTimer());
+                passwordTable.getScene().setOnKeyReleased(event -> inactivityService.resetTimer());
+                passwordTable.getScene().setOnScroll(event -> inactivityService.resetTimer());
+            }
+        });
+    }
+
+    private void handleInactivityLogout() {
+        // Detener monitoreo
+        inactivityService.stopMonitoring();
+
+        // Mostrar mensaje al usuario
+        javafx.application.Platform.runLater(() -> {
+            try {
+                // Mostrar alerta de sesión cerrada
+                javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING);
+                alert.setTitle("Sesión Cerrada");
+                alert.setHeaderText("Sesión cerrada por inactividad");
+                alert.setContentText("Tu sesión ha sido cerrada automáticamente por 3 minutos de inactividad.");
+                alert.initOwner(passwordTable.getScene().getWindow());
+                alert.showAndWait();
+
+                // Cerrar sesión
+                authService.logout();
+
+                // Navegar al login
+                FXMLLoader loader = fxmlLoaderUtil.getLoader("/fxml/login.fxml");
+                Parent loginView = loader.load();
+
+                Stage stage = (Stage) passwordTable.getScene().getWindow();
+                Scene scene = new Scene(loginView);
+                scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+                stage.setScene(scene);
+                stage.setTitle("KeyGuard - Login");
+                stage.centerOnScreen();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 }
