@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<VBox xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.passmanager.controller.ExportDialogController"
+      styleClass="dialog-container"
+      prefHeight="400" prefWidth="500"
+      spacing="20">
+
+    <padding>
+        <Insets topRightBottomLeft="30"/>
+    </padding>
+
+    <!-- Título -->
+    <VBox spacing="10">
+        <Text text="💾 Exportar Contraseñas" styleClass="dialog-title"/>
+        <Label text="Crea un backup cifrado de todas tus contraseñas"
+               styleClass="dialog-subtitle" wrapText="true"/>
+    </VBox>
+
+    <!-- Información -->
+    <VBox spacing="10" styleClass="card" style="-fx-padding: 15; -fx-background-color: #eff6ff;">
+        <Label text="ℹ️ Información importante:"
+               style="-fx-font-weight: bold; -fx-text-fill: #2563eb;"/>
+        <Label text="• El backup estará protegido con cifrado AES-256-GCM"
+               wrapText="true" style="-fx-text-fill: #1e40af;"/>
+        <Label text="• Necesitarás la contraseña de backup para restaurar"
+               wrapText="true" style="-fx-text-fill: #1e40af;"/>
+        <Label text="• Guarda el archivo en un lugar seguro (USB, nube cifrada, etc.)"
+               wrapText="true" style="-fx-text-fill: #1e40af;"/>
+    </VBox>
+
+    <!-- Formulario -->
+    <VBox spacing="15" VBox.vgrow="ALWAYS">
+
+        <!-- Contraseña de backup -->
+        <VBox spacing="5">
+            <Label text="Contraseña de Backup *" styleClass="field-label"/>
+            <HBox spacing="5" alignment="CENTER_LEFT">
+                <PasswordField fx:id="passwordField" promptText="Mínimo 8 caracteres" HBox.hgrow="ALWAYS"/>
+                <TextField fx:id="passwordVisibleField" promptText="Mínimo 8 caracteres"
+                           visible="false" managed="false" HBox.hgrow="ALWAYS"/>
+                <Button fx:id="togglePasswordButton" text="👁" onAction="#handleTogglePassword"
+                        style="-fx-background-color: #eff6ff; -fx-text-fill: #2563eb; -fx-cursor: hand; -fx-font-size: 18px; -fx-padding: 6; -fx-background-radius: 8;"/>
+            </HBox>
+            <Label text="Puede ser la misma que tu contraseña maestra o una diferente"
+                   style="-fx-font-size: 11px; -fx-text-fill: #6b7280;"/>
+        </VBox>
+
+        <!-- Confirmar contraseña -->
+        <VBox spacing="5">
+            <Label text="Confirmar Contraseña *" styleClass="field-label"/>
+            <HBox spacing="5" alignment="CENTER_LEFT">
+                <PasswordField fx:id="confirmPasswordField" promptText="Repite la contraseña" HBox.hgrow="ALWAYS"/>
+                <TextField fx:id="confirmVisibleField" promptText="Repite la contraseña"
+                           visible="false" managed="false" HBox.hgrow="ALWAYS"/>
+                <Button fx:id="toggleConfirmButton" text="👁" onAction="#handleToggleConfirm"
+                        style="-fx-background-color: #eff6ff; -fx-text-fill: #2563eb; -fx-cursor: hand; -fx-font-size: 18px; -fx-padding: 6; -fx-background-radius: 8;"/>
+            </HBox>
+        </VBox>
+
+        <!-- Ubicación del archivo -->
+        <VBox spacing="5">
+            <Label text="Ubicación del Archivo *" styleClass="field-label"/>
+            <HBox spacing="5">
+                <TextField fx:id="filePathField" promptText="Selecciona dónde guardar el backup"
+                           editable="false" HBox.hgrow="ALWAYS"/>
+                <Button text="Examinar..." onAction="#handleBrowse" prefWidth="100"/>
+            </HBox>
+        </VBox>
+
+        <!-- Mensaje de error -->
+        <Label fx:id="errorLabel" styleClass="error-label" visible="false" wrapText="true"/>
+    </VBox>
+
+    <!-- Botones -->
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Cancelar" onAction="#handleCancel" styleClass="btn-secondary" prefWidth="100"/>
+        <Button text="Exportar" onAction="#handleExport" prefWidth="100"/>
+    </HBox>
+
+</VBox>

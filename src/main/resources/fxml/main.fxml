@@ -57,6 +57,16 @@
 
                 <Separator style="-fx-background-color: #334155;"/>
 
+                <Button text="💾 Exportar Contraseñas" styleClass="category-item"
+                        onAction="#handleExport" maxWidth="Infinity"
+                        style="-fx-text-fill: #3b82f6;"/>
+
+                <Button text="📥 Importar Contraseñas" styleClass="category-item"
+                        onAction="#handleImport" maxWidth="Infinity"
+                        style="-fx-text-fill: #8b5cf6;"/>
+
+                <Separator style="-fx-background-color: #334155;"/>
+
                 <Button text="Cerrar Sesión" styleClass="category-item"
                         onAction="#handleLogout" maxWidth="Infinity"
                         style="-fx-text-fill: #f87171;"/>

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<VBox xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.passmanager.controller.ImportDialogController"
+      styleClass="dialog-container"
+      prefHeight="450" prefWidth="500"
+      spacing="20">
+
+    <padding>
+        <Insets topRightBottomLeft="30"/>
+    </padding>
+
+    <!-- Título -->
+    <VBox spacing="10">
+        <Text text="📥 Importar Contraseñas" styleClass="dialog-title"/>
+        <Label text="Restaura contraseñas desde un backup cifrado"
+               styleClass="dialog-subtitle" wrapText="true"/>
+    </VBox>
+
+    <!-- Advertencia -->
+    <VBox spacing="10" styleClass="card" style="-fx-padding: 15; -fx-background-color: #fef3c7;">
+        <Label text="⚠️ Advertencia importante:"
+               style="-fx-font-weight: bold; -fx-text-fill: #92400e;"/>
+        <Label text="• Verifica que el archivo de backup sea legítimo"
+               wrapText="true" style="-fx-text-fill: #78350f;"/>
+        <Label text="• Solo importa backups de fuentes confiables"
+               wrapText="true" style="-fx-text-fill: #78350f;"/>
+        <Label text="• Si seleccionas 'Reemplazar existentes', se eliminarán todas tus contraseñas actuales"
+               wrapText="true" style="-fx-text-fill: #dc2626; -fx-font-weight: bold;"/>
+    </VBox>
+
+    <!-- Formulario -->
+    <VBox spacing="15" VBox.vgrow="ALWAYS">
+
+        <!-- Archivo de backup -->
+        <VBox spacing="5">
+            <Label text="Archivo de Backup *" styleClass="field-label"/>
+            <HBox spacing="5">
+                <TextField fx:id="filePathField" promptText="Selecciona el archivo de backup (.json)"
+                           editable="false" HBox.hgrow="ALWAYS"/>
+                <Button text="Examinar..." onAction="#handleBrowse" prefWidth="100"/>
+            </HBox>
+        </VBox>
+
+        <!-- Contraseña de backup -->
+        <VBox spacing="5">
+            <Label text="Contraseña de Backup *" styleClass="field-label"/>
+            <HBox spacing="5" alignment="CENTER_LEFT">
+                <PasswordField fx:id="passwordField" promptText="Contraseña usada al exportar" HBox.hgrow="ALWAYS"/>
+                <TextField fx:id="passwordVisibleField" promptText="Contraseña usada al exportar"
+                           visible="false" managed="false" HBox.hgrow="ALWAYS"/>
+                <Button fx:id="togglePasswordButton" text="👁" onAction="#handleTogglePassword"
+                        style="-fx-background-color: #eff6ff; -fx-text-fill: #2563eb; -fx-cursor: hand; -fx-font-size: 18px; -fx-padding: 6; -fx-background-radius: 8;"/>
+            </HBox>
+        </VBox>
+
+        <!-- Opción: Reemplazar existentes -->
+        <VBox spacing="5">
+            <CheckBox fx:id="replaceExistingCheckbox" text="Reemplazar contraseñas existentes"
+                      style="-fx-font-weight: bold;"/>
+            <Label text="⚠️ Si está marcado, se eliminarán TODAS tus contraseñas actuales antes de importar"
+                   wrapText="true" style="-fx-font-size: 11px; -fx-text-fill: #dc2626;"/>
+            <Label text="✅ Si no está marcado, solo se agregarán las contraseñas que no existan (comparación por título)"
+                   wrapText="true" style="-fx-font-size: 11px; -fx-text-fill: #059669;"/>
+        </VBox>
+
+        <!-- Información del backup (después de validar) -->
+        <VBox fx:id="backupInfoContainer" spacing="5" visible="false" managed="false"
+              styleClass="card" style="-fx-padding: 10; -fx-background-color: #f0fdf4;">
+            <Label text="✅ Backup válido" style="-fx-font-weight: bold; -fx-text-fill: #166534;"/>
+            <Label fx:id="backupInfoLabel" wrapText="true" style="-fx-text-fill: #15803d;"/>
+        </VBox>
+
+        <!-- Mensaje de error -->
+        <Label fx:id="errorLabel" styleClass="error-label" visible="false" wrapText="true"/>
+    </VBox>
+
+    <!-- Botones -->
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Validar" onAction="#handleValidate" styleClass="btn-secondary" prefWidth="100"/>
+        <Button text="Cancelar" onAction="#handleCancel" styleClass="btn-secondary" prefWidth="100"/>
+        <Button fx:id="importButton" text="Importar" onAction="#handleImport" prefWidth="100" disable="true"/>
+    </HBox>
+
+</VBox>
