@@ -484,6 +484,65 @@ public class MainController implements Initializable {
         dialogUtil.showErrorDialog(passwordTable.getScene().getWindow(), title, message);
     }
 
+    /**
+     * Abre el diálogo de verificación masiva de contraseñas comprometidas.
+     *
+     * ¿Por qué ofrecer esta opción manual?
+     * - El usuario puede querer auditar todas sus contraseñas periódicamente
+     * - Complementa la verificación automática al crear/editar
+     * - Permite detectar contraseñas que fueron guardadas antes de implementar esta feature
+     * - Proporciona un reporte completo del estado de seguridad
+     *
+     * ¿Cuándo debería el usuario ejecutar esto?
+     * - Después de noticias de grandes brechas de seguridad
+     * - Periódicamente (cada 3-6 meses)
+     * - Cuando sospeche que alguna cuenta fue comprometida
+     * - Primera vez que usa la aplicación (auditar contraseñas existentes)
+     */
+    @FXML
+    private void handleCheckBreaches() {
+        try {
+            // Cargar el FXML del diálogo de verificación
+            FXMLLoader loader = fxmlLoaderUtil.getLoader("/fxml/breach-check.fxml");
+            Parent breachCheckView = loader.load();
+
+            // Obtener el controlador
+            BreachCheckController controller = loader.getController();
+
+            // Crear el Stage del diálogo
+            Stage breachCheckStage = new Stage();
+            breachCheckStage.setTitle("Verificación de Contraseñas Filtradas");
+            breachCheckStage.initModality(Modality.APPLICATION_MODAL);
+            breachCheckStage.initOwner(passwordTable.getScene().getWindow());
+
+            // Configurar la escena
+            Scene scene = new Scene(breachCheckView);
+            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            breachCheckStage.setScene(scene);
+            breachCheckStage.setResizable(false);
+
+            // Pasar el stage al controlador
+            controller.setDialogStage(breachCheckStage);
+
+            // Iniciar la verificación automáticamente al abrir el diálogo
+            // ¿Por qué iniciar automáticamente?
+            // - El usuario ya hizo clic en "Verificar Contraseñas", su intención es clara
+            // - No necesita hacer clic adicional
+            // - Mejor UX: acción inmediata
+            controller.startVerification();
+
+            // Mostrar el diálogo
+            breachCheckStage.showAndWait();
+
+            // Después de cerrar, recargar las contraseñas por si el usuario cambió alguna
+            loadPasswords();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showError("Error", "No se pudo abrir la verificación de contraseñas: " + e.getMessage());
+        }
+    }
+
     @FXML
     private void handleLogout() {
         boolean confirmed = dialogUtil.showConfirmDialog(

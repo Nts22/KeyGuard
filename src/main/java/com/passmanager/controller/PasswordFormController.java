@@ -4,6 +4,7 @@ import com.passmanager.model.dto.CategoryDTO;
 import com.passmanager.model.dto.PasswordEntryDTO;
 import com.passmanager.service.CategoryService;
 import com.passmanager.service.PasswordEntryService;
+import com.passmanager.service.PasswordBreachService;
 import com.passmanager.service.PasswordGeneratorService;
 import com.passmanager.util.FxmlLoaderUtil;
 import javafx.collections.FXCollections;
@@ -47,6 +48,7 @@ public class PasswordFormController implements Initializable {
     private final PasswordEntryService passwordEntryService;
     private final CategoryService categoryService;
     private final PasswordGeneratorService passwordGeneratorService;
+    private final PasswordBreachService passwordBreachService;
     private final FxmlLoaderUtil fxmlLoaderUtil;
 
     private Stage dialogStage;
@@ -58,10 +60,12 @@ public class PasswordFormController implements Initializable {
     public PasswordFormController(PasswordEntryService passwordEntryService,
                                    CategoryService categoryService,
                                    PasswordGeneratorService passwordGeneratorService,
+                                   PasswordBreachService passwordBreachService,
                                    FxmlLoaderUtil fxmlLoaderUtil) {
         this.passwordEntryService = passwordEntryService;
         this.categoryService = categoryService;
         this.passwordGeneratorService = passwordGeneratorService;
+        this.passwordBreachService = passwordBreachService;
         this.fxmlLoaderUtil = fxmlLoaderUtil;
     }
 
@@ -264,6 +268,16 @@ public class PasswordFormController implements Initializable {
             return;
         }
 
+        // PASO 1: Verificar si la contraseña ha sido comprometida
+        // ¿Por qué hacerlo aquí y no después de guardar?
+        // - Mejor UX: avisar al usuario ANTES de guardar
+        // - Le damos opción de cambiar la contraseña inmediatamente
+        // - Evitamos guardar y luego mostrar advertencia
+        if (!checkPasswordBreach(password)) {
+            // El usuario canceló después de ver la advertencia
+            return;
+        }
+
         try {
             List<PasswordEntryDTO.CustomFieldDTO> customFields = new ArrayList<>();
             for (CustomFieldRow row : customFieldRows) {
@@ -308,6 +322,117 @@ public class PasswordFormController implements Initializable {
     @FXML
     private void handleCancel() {
         dialogStage.close();
+    }
+
+    /**
+     * Verifica si una contraseña ha sido comprometida usando Have I Been Pwned API.
+     *
+     * ¿Por qué verificar automáticamente?
+     * - El 65% de usuarios reutiliza contraseñas entre sitios
+     * - Si una contraseña fue filtrada en LinkedIn, puede usarse para atacar otras cuentas
+     * - Es mejor prevenir que el usuario use contraseñas conocidas por hackers
+     *
+     * ¿Por qué no forzar el cambio?
+     * - Puede haber falsos positivos (contraseñas comunes legítimas)
+     * - El usuario puede tener razones válidas (contraseña temporal, cuenta de prueba)
+     * - Mejor educar que forzar
+     *
+     * ¿Qué pasa si la API falla?
+     * - No bloqueamos al usuario
+     * - Mostramos advertencia pero permitimos continuar
+     * - El servicio ya maneja timeouts y errores de red
+     *
+     * @param password La contraseña a verificar
+     * @return true si el usuario quiere continuar (contraseña segura o acepta riesgo),
+     *         false si el usuario cancela
+     */
+    private boolean checkPasswordBreach(String password) {
+        try {
+            // Llamar al servicio de verificación de brechas
+            PasswordBreachService.BreachCheckResult result = passwordBreachService.checkPassword(password);
+
+            // Si la contraseña NO está comprometida, todo bien
+            if (!result.isBreached()) {
+                return true;
+            }
+
+            // La contraseña FUE encontrada en brechas de seguridad
+            // Mostrar advertencia al usuario con detalles
+
+            PasswordBreachService.SeverityLevel severity = result.getSeverityLevel();
+            int occurrences = result.getOccurrences();
+
+            // Construir mensaje informativo basado en la severidad
+            StringBuilder message = new StringBuilder();
+            message.append("⚠️ ADVERTENCIA DE SEGURIDAD ⚠️\n\n");
+            message.append("Esta contraseña ha sido encontrada en ").append(occurrences);
+            message.append(occurrences == 1 ? " brecha" : " brechas").append(" de seguridad conocidas.\n\n");
+
+            message.append("Nivel de riesgo: ").append(severity.getLabel()).append("\n");
+            message.append(severity.getDescription()).append("\n\n");
+
+            // Explicar el riesgo según la severidad
+            if (severity == PasswordBreachService.SeverityLevel.CRITICAL) {
+                message.append("⛔ ALTO RIESGO: Esta contraseña es extremadamente común y conocida por hackers. ");
+                message.append("Es MUY RECOMENDABLE que uses una contraseña diferente.\n\n");
+            } else if (severity == PasswordBreachService.SeverityLevel.HIGH) {
+                message.append("⚠️ RIESGO CONSIDERABLE: Esta contraseña ha sido comprometida múltiples veces. ");
+                message.append("Se recomienda encarecidamente usar una contraseña diferente.\n\n");
+            } else if (severity == PasswordBreachService.SeverityLevel.MEDIUM) {
+                message.append("⚠️ RIESGO MODERADO: Esta contraseña ha aparecido en algunas brechas. ");
+                message.append("Considera usar una contraseña más segura.\n\n");
+            } else {
+                message.append("ℹ️ RIESGO BAJO: Esta contraseña fue encontrada pocas veces. ");
+                message.append("Aún así, considera cambiarla por seguridad.\n\n");
+            }
+
+            message.append("Fuente: Have I Been Pwned (base de datos de 12+ mil millones de contraseñas filtradas)\n\n");
+            message.append("¿Deseas continuar de todas formas?");
+
+            // Mostrar diálogo de confirmación
+            // ButtonType.NO es el default para que el usuario tenga que pensar antes de aceptar
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Contraseña Comprometida");
+            alert.setHeaderText("Esta contraseña ha sido filtrada en brechas de seguridad");
+            alert.setContentText(message.toString());
+
+            // Botones personalizados
+            ButtonType buttonContinue = new ButtonType("Continuar de todas formas");
+            ButtonType buttonCancel = new ButtonType("Cancelar y cambiar contraseña", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+            alert.getButtonTypes().setAll(buttonContinue, buttonCancel);
+
+            // El botón por defecto es "Cancelar" (más seguro)
+            alert.getDialogPane().lookupButton(buttonContinue).setStyle("-fx-background-color: #ef4444;");
+
+            // Mostrar y esperar respuesta
+            return alert.showAndWait()
+                    .map(response -> response == buttonContinue)
+                    .orElse(false);
+
+        } catch (PasswordBreachService.PasswordBreachCheckException e) {
+            // Error al verificar (red, timeout, etc.)
+            // ¿Qué hacer? No bloqueamos al usuario, pero mostramos advertencia
+
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Verificación no disponible");
+            alert.setHeaderText("No se pudo verificar la contraseña");
+            alert.setContentText(
+                    "No fue posible verificar si la contraseña ha sido comprometida:\n\n" +
+                    e.getMessage() + "\n\n" +
+                    "Puedes continuar guardando la contraseña, pero ten en cuenta que no " +
+                    "pudimos verificar su seguridad.\n\n" +
+                    "¿Deseas continuar de todas formas?"
+            );
+
+            ButtonType buttonContinue = new ButtonType("Continuar");
+            ButtonType buttonCancel = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+            alert.getButtonTypes().setAll(buttonContinue, buttonCancel);
+
+            return alert.showAndWait()
+                    .map(response -> response == buttonContinue)
+                    .orElse(false);
+        }
     }
 
     private void showError(String message) {
