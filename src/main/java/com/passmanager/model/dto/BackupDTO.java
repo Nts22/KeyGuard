@@ -13,30 +13,32 @@ import java.util.List;
  *
  * <h2>¿Por qué este formato?</h2>
  *
- * <h3>Metadata</h3>
+ * <h3>Metadata visible</h3>
  * - **version**: Para compatibilidad futura (si cambiamos el formato)
  * - **exportDate**: Para saber cuándo se hizo el backup
- * - **entryCount**: Validación rápida sin descifrar todo
+ * - **entryCount**: Validación rápida
  * - **appVersion**: Para debugging si hay problemas de compatibilidad
+ * - **entries**: Lista de entradas con campos visibles excepto la contraseña
  *
- * <h3>Datos cifrados</h3>
- * - **encryptedData**: JSON completo de todas las contraseñas, cifrado con AES-256-GCM
- * - **iv**: Vector de inicialización (12 bytes) para el cifrado
- * - **salt**: Salt (16 bytes) usado para derivar la clave de cifrado
+ * <h3>Campos visibles vs cifrados</h3>
+ * - **Visibles**: title, username, email, url, notes, categoryName, customFields
+ * - **Cifrado**: Solo el campo password (encryptedPassword por entrada)
+ * - **salt/iv**: Únicos por entrada para máxima seguridad
  *
  * <h2>Proceso de cifrado</h2>
  * 1. Usuario proporciona contraseña de backup
- * 2. Generamos salt aleatorio (16 bytes)
- * 3. Derivamos clave AES-256 usando PBKDF2-SHA256 (100,000 iteraciones)
- * 4. Generamos IV aleatorio (12 bytes)
- * 5. Ciframos el JSON con AES-256-GCM
- * 6. Guardamos: metadata + salt + iv + datos cifrados
+ * 2. Para cada entrada:
+ *    - Generamos salt aleatorio (16 bytes)
+ *    - Derivamos clave AES-256 usando PBKDF2-SHA256 (100,000 iteraciones)
+ *    - Generamos IV aleatorio (12 bytes)
+ *    - Ciframos SOLO la contraseña con AES-256-GCM
+ * 3. Guardamos: metadata + entries con campos visibles + contraseñas cifradas
  *
- * <h2>¿Por qué cifrar el backup?</h2>
- * - Protege tus contraseñas si el archivo cae en manos incorrectas
- * - Permite almacenar backups en la nube (Dropbox, Google Drive, etc.)
- * - Compatible con el principio de zero-knowledge
- * - El usuario puede elegir una contraseña diferente a la maestra
+ * <h2>¿Por qué este enfoque híbrido?</h2>
+ * - Puedes ver qué contraseñas tienes sin descifrar
+ * - Las contraseñas reales están protegidas
+ * - Fácil de auditar y buscar entradas específicas
+ * - Cada contraseña tiene su propio salt/IV para máxima seguridad
  *
  * @author KeyGuard Team
  */
@@ -70,41 +72,22 @@ public class BackupDTO {
     private String appVersion;
 
     /**
-     * Salt usado para derivar la clave de cifrado (Base64).
-     * 16 bytes (128 bits) de entropía aleatoria.
+     * Lista de entradas del backup.
+     * Todos los campos son visibles excepto la contraseña que está cifrada.
      */
-    private String salt;
-
-    /**
-     * Vector de inicialización para el cifrado AES-GCM (Base64).
-     * 12 bytes (96 bits) generados aleatoriamente por backup.
-     */
-    private String iv;
-
-    /**
-     * Datos cifrados que contienen todas las contraseñas (Base64).
-     * El contenido descifrado es un JSON con:
-     * {
-     *   "entries": [
-     *     {
-     *       "title": "Facebook",
-     *       "username": "user@example.com",
-     *       "password": "encrypted_password",
-     *       "email": "user@example.com",
-     *       "url": "https://facebook.com",
-     *       "notes": "Mi cuenta principal",
-     *       "categoryName": "Redes Sociales",
-     *       "customFields": [...]
-     *     },
-     *     ...
-     *   ]
-     * }
-     */
-    private String encryptedData;
+    private List<BackupEntryDTO> entries;
 
     /**
      * DTO para una entrada individual en el backup.
      * No incluye IDs ya que pueden cambiar al importar.
+     *
+     * Campos VISIBLES en el JSON:
+     * - title, username, email, url, notes, categoryName, customFields
+     *
+     * Campos CIFRADOS:
+     * - encryptedPassword: La contraseña cifrada con AES-256-GCM
+     * - salt: Salt único para esta entrada (16 bytes, Base64)
+     * - iv: IV único para esta entrada (12 bytes, Base64)
      */
     @Data
     @Builder
@@ -114,21 +97,14 @@ public class BackupDTO {
         private String title;
         private String username;
         private String email;
-        private String password;
         private String url;
         private String notes;
         private String categoryName;
         private List<PasswordEntryDTO.CustomFieldDTO> customFields;
-    }
 
-    /**
-     * DTO contenedor para los datos descifrados.
-     */
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class BackupDataDTO {
-        private List<BackupEntryDTO> entries;
+        // Campos de seguridad (por entrada)
+        private String encryptedPassword;  // Contraseña cifrada (Base64)
+        private String salt;               // Salt para derivar clave (Base64, 16 bytes)
+        private String iv;                 // IV para cifrado (Base64, 12 bytes)
     }
 }
