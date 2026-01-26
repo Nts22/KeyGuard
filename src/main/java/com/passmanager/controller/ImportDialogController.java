@@ -278,6 +278,7 @@ public class ImportDialogController implements Initializable {
             dialogStage.close();
 
         } catch (BackupService.BackupException e) {
+            e.printStackTrace();
             showError("Error al importar: " + e.getMessage());
         }
     }

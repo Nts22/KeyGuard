@@ -9,7 +9,7 @@
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.passmanager.controller.ImportDialogController"
       styleClass="dialog-container"
-      prefHeight="450" prefWidth="500"
+      prefHeight="700" prefWidth="500"
       spacing="20">
 
     <padding>
@@ -36,7 +36,7 @@
     </VBox>
 
     <!-- Formulario -->
-    <VBox spacing="15" VBox.vgrow="ALWAYS">
+    <VBox spacing="15">
 
         <!-- Archivo de backup -->
         <VBox spacing="5">
