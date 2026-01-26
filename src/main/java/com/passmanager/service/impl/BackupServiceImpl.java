@@ -194,13 +194,13 @@ public class BackupServiceImpl implements BackupService {
         int skippedEntries = 0;
 
         try {
-            // PASO 1: Leer el archivo JSON
+            // Leer el archivo JSON
             BackupDTO backup;
             try (FileReader reader = new FileReader(inputFile)) {
                 backup = gson.fromJson(reader, BackupDTO.class);
             }
 
-            // PASO 2: Validar estructura básica
+            // Validar estructura básica
             if (backup == null) {
                 throw new BackupException("El archivo de backup está vacío o es inválido");
             }
@@ -209,14 +209,14 @@ public class BackupServiceImpl implements BackupService {
                 throw new BackupException("Versión de backup no compatible: " + backup.getVersion());
             }
 
-            // PASO 3: Validar que tenga entradas
+            // Validar que tenga entradas
             if (backup.getEntries() == null || backup.getEntries().isEmpty()) {
                 throw new BackupException("El backup no contiene entradas");
             }
 
             totalEntries = backup.getEntries().size();
 
-            // PASO 4: Si replaceExisting, eliminar todas las contraseñas actuales
+            // Si replaceExisting, eliminar todas las contraseñas actuales
             if (replaceExisting) {
                 List<PasswordEntryDTO> currentPasswords = passwordEntryService.findAll();
                 for (PasswordEntryDTO entry : currentPasswords) {
@@ -228,7 +228,7 @@ public class BackupServiceImpl implements BackupService {
                 }
             }
 
-            // PASO 5: Obtener títulos existentes (para detectar duplicados)
+            // Obtener títulos existentes (para detectar duplicados)
             Set<String> existingTitles = new HashSet<>();
             if (!replaceExisting) {
                 List<PasswordEntryDTO> currentPasswords = passwordEntryService.findAll();
@@ -237,7 +237,7 @@ public class BackupServiceImpl implements BackupService {
                 }
             }
 
-            // PASO 6: Importar cada entrada
+            // Importar cada entrada
             for (BackupDTO.BackupEntryDTO backupEntry : backup.getEntries()) {
                 try {
                     // Verificar duplicado
@@ -271,7 +271,7 @@ public class BackupServiceImpl implements BackupService {
                             .title(backupEntry.getTitle())
                             .username(backupEntry.getUsername())
                             .email(backupEntry.getEmail())
-                            .password(decryptedPassword)  // Contraseña descifrada
+                            .password(decryptedPassword)
                             .url(backupEntry.getUrl())
                             .notes(backupEntry.getNotes())
                             .categoryId(categoryId)

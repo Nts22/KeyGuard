@@ -331,6 +331,15 @@ public class MainController implements Initializable {
         }
     }
 
+    /**
+     * Recarga TODAS las categorías y contraseñas.
+     * Útil después de operaciones que pueden crear nuevas categorías (como importar backups).
+     */
+    private void reloadAll() {
+        loadCategories();
+        loadPasswords();
+    }
+
     @FXML
     private void handleSearch() {
         loadPasswords();
@@ -621,13 +630,14 @@ public class MainController implements Initializable {
 
             controller.setDialogStage(importStage);
 
-            // Callback para recargar contraseñas después de importar
-            controller.setOnImportCallback(this::loadPasswords);
+            // Callback para recargar categorías y contraseñas después de importar
+            // (pueden haberse creado nuevas categorías automáticamente)
+            controller.setOnImportCallback(this::reloadAll);
 
             importStage.showAndWait();
 
-            // Recargar contraseñas después de cerrar (por si importó)
-            loadPasswords();
+            // Recargar todo después de cerrar (por si importó)
+            reloadAll();
 
         } catch (Exception e) {
             e.printStackTrace();
