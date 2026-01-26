@@ -202,9 +202,14 @@ KeyGuard incluye funcionalidad completa de backup y restauración con cifrado de
 
 ### Seguridad del backup
 
+**Enfoque híbrido**:
+- **Campos visibles**: título, usuario, email, URL, notas, categoría (texto claro)
+- **Contraseñas cifradas**: Solo las contraseñas están cifradas con AES-256-GCM
+- **Ventajas**: Puedes auditar el backup sin descifrar, pero las contraseñas están protegidas
+
 **Cifrado AES-256-GCM**:
 - El mismo cifrado de grado militar que usa la base de datos interna
-- Imposible leer el contenido sin la contraseña de backup
+- Imposible leer las contraseñas sin la contraseña de backup
 - Protegido contra manipulación (GCM detecta alteraciones)
 
 **Contraseña de backup**:
@@ -213,9 +218,9 @@ KeyGuard incluye funcionalidad completa de backup y restauración con cifrado de
 - Derivada con PBKDF2-SHA256 (100,000 iteraciones)
 - Nunca se almacena, solo se usa para cifrar/descifrar
 
-**Salt e IV únicos**:
-- Cada backup tiene salt e IV aleatorios nuevos
-- Incluso con la misma contraseña, el cifrado es diferente cada vez
+**Salt e IV únicos POR ENTRADA**:
+- Cada contraseña tiene su propio salt e IV aleatorios
+- Máxima seguridad: incluso contraseñas duplicadas se cifran diferente
 - Protege contra ataques de diccionario precomputados
 
 ### Exportar contraseñas
@@ -226,18 +231,52 @@ KeyGuard incluye funcionalidad completa de backup y restauración con cifrado de
 4. Selecciona dónde guardar el archivo (sugiere nombre con fecha)
 5. ✅ Se crea un archivo JSON cifrado con todas tus contraseñas
 
-**Formato del archivo**:
+**Formato del archivo** (Híbrido: campos visibles + contraseñas cifradas):
 ```json
 {
   "version": "1.0",
   "exportDate": "2024-01-26T10:30:00",
-  "entryCount": 25,
+  "entryCount": 2,
   "appVersion": "1.0.0",
-  "salt": "base64_salt_aqui",
-  "iv": "base64_iv_aqui",
-  "encryptedData": "base64_datos_cifrados_aqui"
+  "entries": [
+    {
+      "title": "Facebook",
+      "username": "pablo@email.com",
+      "email": "pablo@email.com",
+      "url": "https://facebook.com",
+      "notes": "Mi cuenta personal",
+      "categoryName": "Redes Sociales",
+      "customFields": [],
+      "encryptedPassword": "a8f3d9e2b1c4f5...",
+      "salt": "wqAoW+coa1Zpj8+iUA...",
+      "iv": "0dW5kJg8f3a1b2c..."
+    },
+    {
+      "title": "Gmail",
+      "username": "pablo@gmail.com",
+      "email": "pablo@gmail.com",
+      "url": "https://gmail.com",
+      "notes": "Correo principal",
+      "categoryName": "Correo",
+      "customFields": [],
+      "encryptedPassword": "c9d2e1f3a4b5c6...",
+      "salt": "xrBpX+dpa2Aqk9+jVB...",
+      "iv": "1eX6lKh9g4b2c3d..."
+    }
+  ]
 }
 ```
+
+**📋 Campos VISIBLES** (texto claro):
+- `title`, `username`, `email`, `url`, `notes`, `categoryName`, `customFields`
+- Puedes ver qué contraseñas tienes sin descifrar el archivo
+- Fácil de auditar y buscar entradas específicas
+
+**🔒 Campos CIFRADOS** (AES-256-GCM):
+- `encryptedPassword`: La contraseña real cifrada
+- `salt`: Salt único para esta entrada (16 bytes, Base64)
+- `iv`: IV único para esta entrada (12 bytes, Base64)
+- Cada contraseña tiene su propio salt/IV para máxima seguridad
 
 **Nombre sugerido**: `keyguard-backup-2024-01-26.json`
 

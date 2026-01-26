@@ -116,6 +116,7 @@ public class BackupServiceImpl implements BackupService {
             }
 
             // PASO 2: Convertir a formato de backup (sin IDs, con nombres de categorías)
+            // CADA entrada cifra su contraseña individualmente con su propio salt/IV
             List<BackupDTO.BackupEntryDTO> backupEntries = new ArrayList<>();
             for (PasswordEntryDTO entry : allPasswords) {
                 // Obtener nombre de categoría si existe
@@ -134,50 +135,39 @@ public class BackupServiceImpl implements BackupService {
                     }
                 }
 
+                // PASO 3: Cifrar SOLO la contraseña de esta entrada
+                byte[] entrySalt = generateRandomBytes(SALT_LENGTH);
+                byte[] entryIv = generateRandomBytes(GCM_IV_LENGTH);
+                SecretKey entryKey = deriveKey(backupPassword, entrySalt);
+                byte[] encryptedPassword = encrypt(entry.getPassword().getBytes(StandardCharsets.UTF_8), entryKey, entryIv);
+
                 BackupDTO.BackupEntryDTO backupEntry = BackupDTO.BackupEntryDTO.builder()
                         .title(entry.getTitle())
                         .username(entry.getUsername())
                         .email(entry.getEmail())
-                        .password(entry.getPassword()) // Ya está descifrada por el servicio
                         .url(entry.getUrl())
                         .notes(entry.getNotes())
                         .categoryName(categoryName)
                         .customFields(entry.getCustomFields())
+                        // Campos cifrados (cada entrada tiene su propio salt/IV)
+                        .encryptedPassword(Base64.getEncoder().encodeToString(encryptedPassword))
+                        .salt(Base64.getEncoder().encodeToString(entrySalt))
+                        .iv(Base64.getEncoder().encodeToString(entryIv))
                         .build();
 
                 backupEntries.add(backupEntry);
             }
 
-            // PASO 3: Crear el DTO de datos a cifrar
-            BackupDTO.BackupDataDTO backupData = BackupDTO.BackupDataDTO.builder()
-                    .entries(backupEntries)
-                    .build();
-
-            // PASO 4: Serializar a JSON
-            String jsonData = gson.toJson(backupData);
-
-            // PASO 5: Generar salt e IV aleatorios
-            byte[] salt = generateRandomBytes(SALT_LENGTH);
-            byte[] iv = generateRandomBytes(GCM_IV_LENGTH);
-
-            // PASO 6: Derivar clave de cifrado desde la contraseña
-            SecretKey encryptionKey = deriveKey(backupPassword, salt);
-
-            // PASO 7: Cifrar el JSON
-            byte[] encryptedData = encrypt(jsonData.getBytes(StandardCharsets.UTF_8), encryptionKey, iv);
-
-            // PASO 8: Crear el DTO de backup con metadata
+            // PASO 4: Crear el DTO de backup con metadata y entradas
             BackupDTO backup = BackupDTO.builder()
                     .version(BACKUP_VERSION)
                     .exportDate(LocalDateTime.now())
                     .entryCount(backupEntries.size())
                     .appVersion(APP_VERSION)
-                    .salt(Base64.getEncoder().encodeToString(salt))
-                    .iv(Base64.getEncoder().encodeToString(iv))
-                    .encryptedData(Base64.getEncoder().encodeToString(encryptedData))
+                    .entries(backupEntries)  // Las entradas ahora están visibles (excepto password)
                     .build();
 
-            // PASO 9: Guardar en archivo JSON
+            // PASO 5: Guardar en archivo JSON
             try (FileWriter writer = new FileWriter(outputFile)) {
                 gson.toJson(backup, writer);
             }
@@ -219,34 +209,14 @@ public class BackupServiceImpl implements BackupService {
                 throw new BackupException("Versión de backup no compatible: " + backup.getVersion());
             }
 
-            // PASO 3: Decodificar salt, IV y datos cifrados
-            byte[] salt = Base64.getDecoder().decode(backup.getSalt());
-            byte[] iv = Base64.getDecoder().decode(backup.getIv());
-            byte[] encryptedData = Base64.getDecoder().decode(backup.getEncryptedData());
-
-            // PASO 4: Derivar clave de descifrado
-            SecretKey decryptionKey = deriveKey(backupPassword, salt);
-
-            // PASO 5: Descifrar los datos
-            byte[] decryptedData;
-            try {
-                decryptedData = decrypt(encryptedData, decryptionKey, iv);
-            } catch (Exception e) {
-                throw new BackupException("Contraseña de backup incorrecta");
+            // PASO 3: Validar que tenga entradas
+            if (backup.getEntries() == null || backup.getEntries().isEmpty()) {
+                throw new BackupException("El backup no contiene entradas");
             }
 
-            String jsonData = new String(decryptedData, StandardCharsets.UTF_8);
+            totalEntries = backup.getEntries().size();
 
-            // PASO 6: Deserializar JSON
-            BackupDTO.BackupDataDTO backupData = gson.fromJson(jsonData, BackupDTO.BackupDataDTO.class);
-
-            if (backupData == null || backupData.getEntries() == null) {
-                throw new BackupException("Datos de backup corruptos");
-            }
-
-            totalEntries = backupData.getEntries().size();
-
-            // PASO 7: Si replaceExisting, eliminar todas las contraseñas actuales
+            // PASO 4: Si replaceExisting, eliminar todas las contraseñas actuales
             if (replaceExisting) {
                 List<PasswordEntryDTO> currentPasswords = passwordEntryService.findAll();
                 for (PasswordEntryDTO entry : currentPasswords) {
@@ -258,7 +228,7 @@ public class BackupServiceImpl implements BackupService {
                 }
             }
 
-            // PASO 8: Obtener títulos existentes (para detectar duplicados)
+            // PASO 5: Obtener títulos existentes (para detectar duplicados)
             Set<String> existingTitles = new HashSet<>();
             if (!replaceExisting) {
                 List<PasswordEntryDTO> currentPasswords = passwordEntryService.findAll();
@@ -267,13 +237,27 @@ public class BackupServiceImpl implements BackupService {
                 }
             }
 
-            // PASO 9: Importar cada entrada
-            for (BackupDTO.BackupEntryDTO backupEntry : backupData.getEntries()) {
+            // PASO 6: Importar cada entrada
+            for (BackupDTO.BackupEntryDTO backupEntry : backup.getEntries()) {
                 try {
                     // Verificar duplicado
                     if (!replaceExisting && existingTitles.contains(backupEntry.getTitle().toLowerCase())) {
                         skippedEntries++;
                         continue;
+                    }
+
+                    // Descifrar la contraseña de esta entrada específica
+                    String decryptedPassword;
+                    try {
+                        byte[] entrySalt = Base64.getDecoder().decode(backupEntry.getSalt());
+                        byte[] entryIv = Base64.getDecoder().decode(backupEntry.getIv());
+                        byte[] encryptedPassword = Base64.getDecoder().decode(backupEntry.getEncryptedPassword());
+
+                        SecretKey entryKey = deriveKey(backupPassword, entrySalt);
+                        byte[] decryptedBytes = decrypt(encryptedPassword, entryKey, entryIv);
+                        decryptedPassword = new String(decryptedBytes, StandardCharsets.UTF_8);
+                    } catch (Exception e) {
+                        throw new BackupException("Contraseña de backup incorrecta");
                     }
 
                     // Obtener o crear categoría
@@ -282,12 +266,12 @@ public class BackupServiceImpl implements BackupService {
                         categoryId = getOrCreateCategory(backupEntry.getCategoryName());
                     }
 
-                    // Crear la entrada
+                    // Crear la entrada con la contraseña descifrada
                     PasswordEntryDTO newEntry = PasswordEntryDTO.builder()
                             .title(backupEntry.getTitle())
                             .username(backupEntry.getUsername())
                             .email(backupEntry.getEmail())
-                            .password(backupEntry.getPassword())
+                            .password(decryptedPassword)  // Contraseña descifrada
                             .url(backupEntry.getUrl())
                             .notes(backupEntry.getNotes())
                             .categoryId(categoryId)
@@ -334,15 +318,20 @@ public class BackupServiceImpl implements BackupService {
                 throw new BackupException("El archivo de backup está vacío o es inválido");
             }
 
-            // Decodificar y intentar descifrar (para validar contraseña)
-            byte[] salt = Base64.getDecoder().decode(backup.getSalt());
-            byte[] iv = Base64.getDecoder().decode(backup.getIv());
-            byte[] encryptedData = Base64.getDecoder().decode(backup.getEncryptedData());
+            // Validar que tenga entradas
+            if (backup.getEntries() == null || backup.getEntries().isEmpty()) {
+                throw new BackupException("El backup no contiene entradas");
+            }
 
-            SecretKey decryptionKey = deriveKey(backupPassword, salt);
-
+            // Validar contraseña intentando descifrar la primera entrada
+            BackupDTO.BackupEntryDTO firstEntry = backup.getEntries().get(0);
             try {
-                decrypt(encryptedData, decryptionKey, iv);
+                byte[] entrySalt = Base64.getDecoder().decode(firstEntry.getSalt());
+                byte[] entryIv = Base64.getDecoder().decode(firstEntry.getIv());
+                byte[] encryptedPassword = Base64.getDecoder().decode(firstEntry.getEncryptedPassword());
+
+                SecretKey entryKey = deriveKey(backupPassword, entrySalt);
+                decrypt(encryptedPassword, entryKey, entryIv);
             } catch (Exception e) {
                 throw new BackupException("Contraseña de backup incorrecta");
             }
