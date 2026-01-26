@@ -543,6 +543,98 @@ public class MainController implements Initializable {
         }
     }
 
+    /**
+     * Abre el diálogo para exportar contraseñas a un backup cifrado.
+     *
+     * ¿Por qué ofrecer exportación?
+     * - Protección contra pérdida de datos (disco dañado, borrado accidental)
+     * - Migración a otro dispositivo
+     * - Compartir contraseñas de forma segura (ej: contraseñas familiares)
+     * - Cumplimiento de políticas de backup
+     *
+     * ¿Por qué cifrado?
+     * - Permite almacenar backup en nube (Dropbox, Google Drive)
+     * - Protege si el archivo cae en manos incorrectas
+     * - Compatible con principio zero-knowledge
+     */
+    @FXML
+    private void handleExport() {
+        try {
+            FXMLLoader loader = fxmlLoaderUtil.getLoader("/fxml/export-dialog.fxml");
+            Parent exportView = loader.load();
+
+            ExportDialogController controller = loader.getController();
+
+            Stage exportStage = new Stage();
+            exportStage.setTitle("Exportar Contraseñas");
+            exportStage.initModality(Modality.APPLICATION_MODAL);
+            exportStage.initOwner(passwordTable.getScene().getWindow());
+
+            Scene scene = new Scene(exportView);
+            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            exportStage.setScene(scene);
+            exportStage.setResizable(false);
+
+            controller.setDialogStage(exportStage);
+            exportStage.showAndWait();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showError("Error", "No se pudo abrir el diálogo de exportación: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Abre el diálogo para importar contraseñas desde un backup cifrado.
+     *
+     * ¿Por qué ofrecer importación?
+     * - Restaurar desde backup después de pérdida de datos
+     * - Migrar desde otro dispositivo
+     * - Importar contraseñas compartidas
+     *
+     * ¿Dos modos?
+     * - Agregar: Mantiene contraseñas actuales, solo agrega nuevas
+     * - Reemplazar: Elimina todo y restaura desde backup
+     *
+     * ¿Por qué validación previa?
+     * - Verifica contraseña sin modificar datos
+     * - Muestra info del backup (fecha, cantidad)
+     * - Evita errores de "contraseña incorrecta" después de eliminar datos
+     */
+    @FXML
+    private void handleImport() {
+        try {
+            FXMLLoader loader = fxmlLoaderUtil.getLoader("/fxml/import-dialog.fxml");
+            Parent importView = loader.load();
+
+            ImportDialogController controller = loader.getController();
+
+            Stage importStage = new Stage();
+            importStage.setTitle("Importar Contraseñas");
+            importStage.initModality(Modality.APPLICATION_MODAL);
+            importStage.initOwner(passwordTable.getScene().getWindow());
+
+            Scene scene = new Scene(importView);
+            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            importStage.setScene(scene);
+            importStage.setResizable(false);
+
+            controller.setDialogStage(importStage);
+
+            // Callback para recargar contraseñas después de importar
+            controller.setOnImportCallback(this::loadPasswords);
+
+            importStage.showAndWait();
+
+            // Recargar contraseñas después de cerrar (por si importó)
+            loadPasswords();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showError("Error", "No se pudo abrir el diálogo de importación: " + e.getMessage());
+        }
+    }
+
     @FXML
     private void handleLogout() {
         boolean confirmed = dialogUtil.showConfirmDialog(

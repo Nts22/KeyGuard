@@ -24,6 +24,7 @@ Aplicación de escritorio segura para la gestión de contraseñas, desarrollada 
 - **Generador de contraseñas** - Generación segura con opciones configurables
 - **Validación de seguridad** - Verificación automática contra base de datos de 12+ mil millones de contraseñas filtradas
 - **Auditoría masiva** - Verificación manual de todas las contraseñas guardadas
+- **Export/Import cifrado** - Backup y restauración con cifrado AES-256-GCM
 - **Campos personalizados** - Añade campos adicionales a cada entrada (preguntas de seguridad, códigos de recuperación, etc.)
 - **Copia al portapapeles** - Copia rápida de contraseñas con un clic y auto-limpieza
 - **Visualización de contraseñas** - Toggle para mostrar/ocultar contraseñas en formularios
@@ -188,6 +189,191 @@ Puedes verificar todas tus contraseñas guardadas a la vez:
 - **Método k-anonymity**: https://www.troyhunt.com/ive-just-launched-pwned-passwords-version-2/
 - **Creador**: Troy Hunt (Microsoft Regional Director, MVP)
 
+## Exportar e importar contraseñas
+
+KeyGuard incluye funcionalidad completa de backup y restauración con cifrado de grado militar.
+
+### ¿Por qué necesitas backups?
+
+- **Protección contra pérdida de datos**: Disco duro dañado, borrado accidental, ransomware
+- **Migración entre dispositivos**: Cambio de computadora, múltiples dispositivos
+- **Compartir contraseñas de forma segura**: Contraseñas familiares, equipo de trabajo
+- **Cumplimiento de políticas**: Backups periódicos requeridos por seguridad corporativa
+
+### Seguridad del backup
+
+**Cifrado AES-256-GCM**:
+- El mismo cifrado de grado militar que usa la base de datos interna
+- Imposible leer el contenido sin la contraseña de backup
+- Protegido contra manipulación (GCM detecta alteraciones)
+
+**Contraseña de backup**:
+- Puede ser la misma que tu contraseña maestra
+- O puede ser diferente (mayor seguridad)
+- Derivada con PBKDF2-SHA256 (100,000 iteraciones)
+- Nunca se almacena, solo se usa para cifrar/descifrar
+
+**Salt e IV únicos**:
+- Cada backup tiene salt e IV aleatorios nuevos
+- Incluso con la misma contraseña, el cifrado es diferente cada vez
+- Protege contra ataques de diccionario precomputados
+
+### Exportar contraseñas
+
+1. Haz clic en **"💾 Exportar Contraseñas"** en el menú lateral
+2. Ingresa una contraseña de backup (mínimo 8 caracteres)
+3. Confirma la contraseña
+4. Selecciona dónde guardar el archivo (sugiere nombre con fecha)
+5. ✅ Se crea un archivo JSON cifrado con todas tus contraseñas
+
+**Formato del archivo**:
+```json
+{
+  "version": "1.0",
+  "exportDate": "2024-01-26T10:30:00",
+  "entryCount": 25,
+  "appVersion": "1.0.0",
+  "salt": "base64_salt_aqui",
+  "iv": "base64_iv_aqui",
+  "encryptedData": "base64_datos_cifrados_aqui"
+}
+```
+
+**Nombre sugerido**: `keyguard-backup-2024-01-26.json`
+
+**¿Dónde guardar el backup?**:
+- ✅ USB externo (almacenamiento físico seguro)
+- ✅ Nube cifrada (Dropbox, Google Drive, OneDrive)
+- ✅ Servidor personal/NAS
+- ✅ Gestor de contraseñas secundario
+- ❌ NO en el mismo disco que KeyGuard (pierde sentido el backup)
+
+### Importar contraseñas
+
+1. Haz clic en **"📥 Importar Contraseñas"** en el menú lateral
+2. Selecciona el archivo de backup (.json)
+3. Ingresa la contraseña de backup
+4. [Opcional] Haz clic en **"Validar"** para verificar antes de importar
+5. Elige el modo de importación:
+   - **Agregar** (recomendado): Mantiene contraseñas actuales, solo agrega nuevas
+   - **Reemplazar**: ELIMINA todo y restaura desde backup
+6. Haz clic en **"Importar"**
+7. ✅ Verás un resumen: importadas, omitidas (duplicadas), errores
+
+### Dos modos de importación
+
+#### Modo Agregar (replaceExisting = false)
+- ✅ **Más seguro**: Mantiene todas las contraseñas actuales
+- ✅ Solo agrega las que no existan (comparación por título)
+- ✅ No pierdes datos existentes
+- ✅ **Recomendado** para la mayoría de usuarios
+
+**Ejemplo**:
+```
+Contraseñas actuales: Facebook, Gmail, Netflix
+Backup contiene: Facebook (diferente), Twitter, Spotify
+
+Resultado:
+✅ Facebook: Se omite (ya existe)
+✅ Twitter: Se importa (nueva)
+✅ Spotify: Se importa (nueva)
+
+Total actuales: Gmail, Facebook, Netflix (sin cambios)
+Total importadas: Twitter, Spotify (agregadas)
+```
+
+#### Modo Reemplazar (replaceExisting = true)
+- ⚠️ **PELIGROSO**: ELIMINA todas las contraseñas actuales primero
+- ⚠️ Luego importa todo del backup
+- ✅ Útil para: Restauración completa, migración a nuevo dispositivo
+- ⚠️ **Requiere confirmación adicional**
+
+**Ejemplo**:
+```
+Contraseñas actuales: Facebook, Gmail, Netflix
+Backup contiene: Twitter, Spotify
+
+Resultado:
+❌ Se eliminan: Facebook, Gmail, Netflix
+✅ Se importan: Twitter, Spotify
+
+Total: Twitter, Spotify (solo las del backup)
+```
+
+### Validación previa
+
+Antes de importar, puedes validar el backup:
+- Verifica que la contraseña es correcta
+- Muestra información sin modificar datos:
+  - Versión del backup
+  - Fecha de exportación
+  - Número de contraseñas
+  - Versión de KeyGuard usada
+
+Esto te ayuda a:
+- Confirmar que tienes el archivo correcto
+- Evitar errores de "contraseña incorrecta" después de eliminar datos
+- Ver qué contiene el backup antes de decidir
+
+### Detección de duplicados
+
+Al importar en modo "Agregar", KeyGuard compara por **título**:
+- Si una contraseña con el mismo título ya existe → se omite
+- Si el título es diferente → se importa como nueva entrada
+- **Nota**: Si tienes dos "Facebook" con usuarios diferentes, solo se mantiene la actual
+
+### Buenas prácticas
+
+**Frecuencia de backups**:
+- 📅 **Semanal**: Si agregas contraseñas frecuentemente
+- 📅 **Mensual**: Uso normal
+- 📅 **Después de cambios importantes**: Actualización masiva de contraseñas
+
+**Almacenamiento**:
+- 🔒 Usa contraseña fuerte y diferente para cada backup
+- 🔒 Guarda copias en al menos 2 ubicaciones diferentes
+- 🔒 Prueba restaurar periódicamente para verificar que funciona
+- 🔒 Considera cifrar la carpeta completa donde guardas los backups (VeraCrypt, BitLocker)
+
+**Rotación de backups**:
+- Mantén backups de los últimos 3-6 meses
+- Elimina backups antiguos de forma segura (triturador de archivos)
+
+### Casos de uso
+
+**Caso 1: Backup periódico de seguridad**
+```
+1. Crear backup mensual: keyguard-backup-2024-01.json
+2. Guardar en: Google Drive / carpeta cifrada
+3. Probar restauración en máquina virtual
+4. Eliminar backup del mes anterior
+```
+
+**Caso 2: Migración a nuevo dispositivo**
+```
+1. En dispositivo antiguo: Exportar todo
+2. Copiar archivo a USB/nube
+3. En dispositivo nuevo: Instalar KeyGuard
+4. Importar con modo "Reemplazar"
+```
+
+**Caso 3: Compartir contraseñas familiares**
+```
+1. Exportar solo las contraseñas que quieres compartir manualmente
+   (editar el JSON cifrado no es posible, exporta todo)
+2. Compartir archivo + contraseña de forma segura (en persona/Signal)
+3. Familia importa con modo "Agregar"
+```
+
+**Caso 4: Recuperación de desastre**
+```
+1. Disco duro falla
+2. Instalar KeyGuard en nuevo disco
+3. Recuperar backup de la nube
+4. Importar con modo "Reemplazar"
+5. ✅ Todas las contraseñas restauradas
+```
+
 ## Estructura del proyecto
 
 ```
@@ -273,6 +459,44 @@ password-manager/
 - **Eventos monitoreados**: Movimiento del ratón, clicks, teclas, scroll
 - **Implementación**: Timer con reseteo en cada evento de usuario
 - **Notificación**: Alert antes de cerrar sesión automáticamente
+
+### Export/Import con Cifrado
+
+- **Cifrado**: AES-256-GCM (idéntico al de la base de datos interna)
+- **Derivación de clave**: PBKDF2-SHA256 con 100,000 iteraciones
+- **Salt**: 16 bytes (128 bits) generado aleatoriamente por backup
+- **IV**: 12 bytes (96 bits) generado aleatoriamente por backup
+- **Tag de autenticación GCM**: 128 bits (detecta manipulación)
+- **Formato**: JSON con metadata legible + datos cifrados en Base64
+- **Librería**: Gson 2.10.1 para serialización JSON
+- **Sin IDs internos**: Backups portables entre instalaciones
+- **Categorías automáticas**: Crea categorías faltantes al importar
+- **Detección de duplicados**: Comparación por título en modo agregar
+- **Validación previa**: Verifica contraseña sin modificar datos
+
+**¿Por qué cifrar si ya está cifrado en la BD?**
+- Permite almacenar en nube (Dropbox, Drive, etc.)
+- Protege si el archivo cae en manos incorrectas
+- Contraseña de backup puede ser diferente (compartir con familia)
+- Compatible con principio zero-knowledge
+
+**Proceso de exportación**:
+1. Descifrar todas las contraseñas de la BD
+2. Convertir a formato portable (sin IDs, con nombres de categorías)
+3. Serializar a JSON
+4. Generar salt e IV aleatorios
+5. Derivar clave desde contraseña de backup
+6. Cifrar JSON con AES-256-GCM
+7. Codificar a Base64 y guardar con metadata
+
+**Proceso de importación**:
+1. Leer y parsear JSON del archivo
+2. Decodificar Base64
+3. Derivar clave desde contraseña de backup
+4. Descifrar datos (si falla → contraseña incorrecta)
+5. Crear categorías faltantes
+6. Verificar duplicados (si modo agregar)
+7. Insertar en BD con cifrado normal
 
 ### Protección contra Ataques
 
