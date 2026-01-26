@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<VBox xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.passmanager.controller.BreachCheckController"
+      styleClass="dialog-container"
+      prefHeight="700" prefWidth="900"
+      spacing="20">
+
+    <padding>
+        <Insets topRightBottomLeft="30"/>
+    </padding>
+
+    <!-- Título y descripción -->
+    <VBox spacing="10">
+        <Text text="🔍 Verificación de Contraseñas Filtradas" styleClass="dialog-title"/>
+        <Label text="Verificando tus contraseñas contra la base de datos de Have I Been Pwned"
+               styleClass="dialog-subtitle" wrapText="true"/>
+    </VBox>
+
+    <!-- Indicador de progreso -->
+    <VBox fx:id="progressContainer" spacing="10" visible="true">
+        <ProgressBar fx:id="progressBar" prefWidth="Infinity" progress="0"/>
+        <Label fx:id="progressLabel" text="Preparando verificación..." styleClass="field-label"/>
+    </VBox>
+
+    <!-- Resumen de resultados -->
+    <HBox fx:id="summaryContainer" spacing="20" visible="false" styleClass="card" style="-fx-padding: 15;">
+        <VBox spacing="5" alignment="CENTER" HBox.hgrow="ALWAYS">
+            <Label text="Total Verificadas" styleClass="field-label"/>
+            <Label fx:id="totalLabel" text="0" style="-fx-font-size: 24px; -fx-font-weight: bold;"/>
+        </VBox>
+        <VBox spacing="5" alignment="CENTER" HBox.hgrow="ALWAYS">
+            <Label text="Seguras ✅" styleClass="field-label"/>
+            <Label fx:id="safeLabel" text="0" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #22c55e;"/>
+        </VBox>
+        <VBox spacing="5" alignment="CENTER" HBox.hgrow="ALWAYS">
+            <Label text="Comprometidas ⚠️" styleClass="field-label"/>
+            <Label fx:id="breachedLabel" text="0" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #ef4444;"/>
+        </VBox>
+    </HBox>
+
+    <!-- Tabla de resultados -->
+    <TableView fx:id="resultsTable" VBox.vgrow="ALWAYS" visible="false">
+        <columns>
+            <TableColumn fx:id="statusColumn" text="Estado" prefWidth="80"/>
+            <TableColumn fx:id="titleColumn" text="Título" prefWidth="200"/>
+            <TableColumn fx:id="usernameColumn" text="Usuario" prefWidth="150"/>
+            <TableColumn fx:id="severityColumn" text="Severidad" prefWidth="150"/>
+            <TableColumn fx:id="occurrencesColumn" text="Apariciones" prefWidth="120"/>
+            <TableColumn fx:id="recommendationColumn" text="Recomendación" prefWidth="200"/>
+        </columns>
+        <placeholder>
+            <Label text="No hay resultados para mostrar"/>
+        </placeholder>
+    </TableView>
+
+    <!-- Mensaje informativo -->
+    <VBox fx:id="infoContainer" spacing="10" visible="false" styleClass="card"
+          style="-fx-padding: 15; -fx-background-color: #eff6ff;">
+        <Label text="ℹ️ Información sobre la verificación:"
+               style="-fx-font-weight: bold; -fx-text-fill: #2563eb;"/>
+        <Label text="• Esta verificación usa la API gratuita de Have I Been Pwned (HIBP)"
+               wrapText="true" style="-fx-text-fill: #1e40af;"/>
+        <Label text="• Nunca enviamos tus contraseñas completas - solo los primeros 5 caracteres del hash SHA-1"
+               wrapText="true" style="-fx-text-fill: #1e40af;"/>
+        <Label text="• HIBP contiene más de 12 mil millones de contraseñas de brechas reales"
+               wrapText="true" style="-fx-text-fill: #1e40af;"/>
+        <Label text="• Se recomienda cambiar cualquier contraseña que aparezca como comprometida"
+               wrapText="true" style="-fx-text-fill: #1e40af;"/>
+    </VBox>
+
+    <!-- Botones -->
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button fx:id="exportButton" text="Exportar Resultados" onAction="#handleExport"
+                visible="false" disable="true"/>
+        <Button text="Cerrar" onAction="#handleClose" styleClass="btn-secondary"/>
+    </HBox>
+
+</VBox>

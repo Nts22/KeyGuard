@@ -51,6 +51,12 @@
 
                 <Separator style="-fx-background-color: #334155;"/>
 
+                <Button text="🔍 Verificar Contraseñas" styleClass="category-item"
+                        onAction="#handleCheckBreaches" maxWidth="Infinity"
+                        style="-fx-text-fill: #fbbf24;"/>
+
+                <Separator style="-fx-background-color: #334155;"/>
+
                 <Button text="Cerrar Sesión" styleClass="category-item"
                         onAction="#handleLogout" maxWidth="Infinity"
                         style="-fx-text-fill: #f87171;"/>

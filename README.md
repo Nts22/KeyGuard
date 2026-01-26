@@ -9,6 +9,8 @@ Aplicación de escritorio segura para la gestión de contraseñas, desarrollada 
 - **Protección con contraseña maestra** - Autenticación segura usando PBKDF2-SHA256 con 100,000 iteraciones
 - **Cifrado AES-256-GCM** - Todas las contraseñas se almacenan cifradas con cifrado de grado militar
 - **Recovery Key (Clave de Recuperación)** - Sistema de recuperación de cuenta si olvidas tu contraseña maestra
+- **Verificación de contraseñas filtradas** - Integración con Have I Been Pwned para detectar contraseñas comprometidas
+- **Auto-logout por inactividad** - Cierre automático de sesión después de 3 minutos de inactividad
 - **Rate Limiting** - Protección contra ataques de fuerza bruta (5 intentos fallidos → bloqueo de 15 minutos)
 - **Auto-limpieza del portapapeles** - Las contraseñas copiadas se eliminan automáticamente después de 30 segundos
 - **Permisos restrictivos en base de datos** - Archivos de BD con permisos 700/600 en sistemas Unix/Linux
@@ -20,8 +22,11 @@ Aplicación de escritorio segura para la gestión de contraseñas, desarrollada 
 - **Búsqueda y filtrado** - Búsqueda en tiempo real por título o categoría
 - **Paginación** - Vista de tabla optimizada con 20 contraseñas por página
 - **Generador de contraseñas** - Generación segura con opciones configurables
+- **Validación de seguridad** - Verificación automática contra base de datos de 12+ mil millones de contraseñas filtradas
+- **Auditoría masiva** - Verificación manual de todas las contraseñas guardadas
 - **Campos personalizados** - Añade campos adicionales a cada entrada (preguntas de seguridad, códigos de recuperación, etc.)
 - **Copia al portapapeles** - Copia rápida de contraseñas con un clic y auto-limpieza
+- **Visualización de contraseñas** - Toggle para mostrar/ocultar contraseñas en formularios
 
 ## Requisitos previos
 
@@ -91,6 +96,98 @@ Si olvidas tu contraseña maestra:
 
 **Nota**: KeyGuard usa cifrado de conocimiento cero (zero-knowledge). Si pierdes TANTO tu contraseña maestra como tu Recovery Key, no hay forma de recuperar tus datos. Esta es una característica de seguridad, no un error.
 
+## Verificación de contraseñas filtradas
+
+KeyGuard incluye integración con **Have I Been Pwned (HIBP)** para detectar contraseñas que han sido comprometidas en brechas de seguridad conocidas.
+
+### ¿Por qué es importante?
+
+Miles de millones de contraseñas han sido filtradas en brechas de seguridad de grandes empresas:
+- LinkedIn: 165 millones de contraseñas
+- Yahoo: 3 mil millones de cuentas
+- Facebook: 533 millones de registros
+- Y muchas más...
+
+Los atacantes usan estas contraseñas en ataques de "credential stuffing" para intentar acceder a otras cuentas. Si tu contraseña fue filtrada en LinkedIn, un atacante podría intentar usarla en tu banco, email, redes sociales, etc.
+
+### ¿Cómo funciona?
+
+KeyGuard utiliza la API gratuita de Have I Been Pwned, que contiene más de **12 mil millones de contraseñas comprometidas** de brechas reales.
+
+**Importante**: Tu contraseña NUNCA se envía al servidor. KeyGuard usa el método **k-anonymity**:
+
+1. ✅ Convierte tu contraseña a hash SHA-1 localmente
+2. ✅ Solo envía los primeros 5 caracteres del hash al servidor
+3. ✅ Recibe ~500-800 hashes que empiezan con esos 5 caracteres
+4. ✅ Compara localmente para detectar coincidencias
+
+**Ejemplo**:
+```
+Contraseña: "micontrasena123"
+SHA-1: "482C811DA5D5B4BC6D497FFA98491E38"
+Se envía: "482C8" (solo 5 caracteres)
+HIBP devuelve: ~500 hashes que empiezan con "482C8"
+KeyGuard verifica localmente: ¿está "11DA5D5B4BC6D497FFA98491E38" en la lista?
+```
+
+Esto garantiza que **nadie** (ni siquiera HIBP) puede saber qué contraseña específica estás verificando.
+
+### Dos formas de verificar
+
+#### 1. Verificación Automática (al crear/editar)
+
+Cada vez que creas o editas una contraseña, KeyGuard la verifica automáticamente contra la base de datos de HIBP.
+
+- ✅ Si la contraseña es segura → se guarda normalmente
+- ⚠️ Si la contraseña fue comprometida → se muestra una advertencia con detalles:
+  - Número de veces que apareció en brechas
+  - Nivel de riesgo (Bajo, Medio, Alto, Crítico)
+  - Opción de continuar o cancelar
+
+**Nota**: Si la API no está disponible, se muestra una advertencia pero se permite continuar (no bloqueamos al usuario).
+
+#### 2. Verificación Manual (auditoría completa)
+
+Puedes verificar todas tus contraseñas guardadas a la vez:
+
+1. Haz clic en **"🔍 Verificar Contraseñas"** en el menú lateral
+2. KeyGuard verificará automáticamente todas tus contraseñas
+3. Verás un reporte completo con:
+   - Total de contraseñas verificadas
+   - Cuántas son seguras ✅
+   - Cuántas están comprometidas ⚠️
+   - Tabla detallada con nivel de riesgo y recomendaciones
+
+**Cuándo usar la verificación manual**:
+- Después de noticias de grandes brechas de seguridad
+- Periódicamente (cada 3-6 meses como auditoría)
+- Primera vez que usas KeyGuard (auditar contraseñas existentes)
+- Cuando sospechas que alguna cuenta fue comprometida
+
+### Niveles de severidad
+
+| Nivel | Criterio | Recomendación |
+|-------|----------|---------------|
+| ✅ Segura | No encontrada en brechas | Mantener contraseña |
+| ℹ️ Riesgo Bajo | < 10 apariciones | Considerar cambio |
+| ⚠️ Riesgo Medio | 10-99 apariciones | Cambiar pronto |
+| ⚠️ Riesgo Alto | 100-999 apariciones | Cambiar urgentemente |
+| ⛔ Riesgo Crítico | 1000+ apariciones | CAMBIAR INMEDIATAMENTE |
+
+### Privacidad y seguridad
+
+- ✅ **Tu contraseña nunca sale de tu computadora completa**
+- ✅ **Solo se envían 5 caracteres del hash SHA-1**
+- ✅ **Imposible que HIBP sepa qué contraseña verificas**
+- ✅ **API gratuita, sin límites de uso razonable**
+- ✅ **No requiere API key ni autenticación**
+
+### Referencias
+
+- **API de HIBP**: https://haveibeenpwned.com/API/v3#PwnedPasswords
+- **Método k-anonymity**: https://www.troyhunt.com/ive-just-launched-pwned-passwords-version-2/
+- **Creador**: Troy Hunt (Microsoft Regional Director, MVP)
+
 ## Estructura del proyecto
 
 ```
@@ -148,6 +245,34 @@ password-manager/
   - Hash de la recovery key (PBKDF2-SHA256, 100,000 iteraciones)
   - Contraseña maestra cifrada con la recovery key (AES-256-GCM)
 - **Uso**: Permite recuperar acceso si olvidas tu contraseña maestra
+
+### Verificación de Contraseñas Filtradas (HIBP)
+
+- **API**: Have I Been Pwned v3 (https://api.pwnedpasswords.com/)
+- **Método**: k-anonymity para proteger privacidad
+- **Protocolo**:
+  1. Cálculo local de SHA-1 hash de la contraseña
+  2. Envío de solo los primeros 5 caracteres del hash (prefix)
+  3. Recepción de ~500-800 hashes con el mismo prefix
+  4. Comparación local del suffix completo
+- **Cliente HTTP**: Java 11+ HttpClient con timeout de 10 segundos
+- **Rate limiting**: Delay de 100ms entre requests en verificación masiva
+- **Manejo de errores**: Degradación elegante si la API no está disponible
+- **Costo**: Completamente gratuito, sin API key requerida
+- **Database**: 12+ mil millones de contraseñas de brechas reales
+
+**¿Por qué SHA-1?**: Aunque SHA-1 está deprecado para almacenamiento de contraseñas, es perfectamente seguro para este caso de uso porque:
+- No se usa para autenticación
+- Solo se usa para búsqueda en una base de datos pública
+- La API de HIBP requiere SHA-1 específicamente
+- El hash nunca se almacena, solo se calcula en memoria
+
+### Auto-logout por Inactividad
+
+- **Timeout**: 3 minutos de inactividad
+- **Eventos monitoreados**: Movimiento del ratón, clicks, teclas, scroll
+- **Implementación**: Timer con reseteo en cada evento de usuario
+- **Notificación**: Alert antes de cerrar sesión automáticamente
 
 ### Protección contra Ataques
 
