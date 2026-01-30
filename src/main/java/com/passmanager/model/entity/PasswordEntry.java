@@ -50,6 +50,11 @@ public class PasswordEntry {
     @Builder.Default
     private List<CustomField> customFields = new ArrayList<>();
 
+    @OneToMany(mappedBy = "passwordEntry", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("changedAt DESC")
+    @Builder.Default
+    private List<PasswordHistory> passwordHistory = new ArrayList<>();
+
     @Convert(converter = LocalDateTimeConverter.class)
     @Column(updatable = false, columnDefinition = "TEXT")
     private LocalDateTime createdAt;

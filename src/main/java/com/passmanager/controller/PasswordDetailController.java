@@ -44,6 +44,7 @@ public class PasswordDetailController implements Initializable {
     private PasswordEntryDTO entry;
     private boolean passwordVisible = false;
     private Runnable onEditCallback;
+    private Runnable onViewHistoryCallback;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
@@ -66,6 +67,10 @@ public class PasswordDetailController implements Initializable {
 
     public void setOnEditCallback(Runnable callback) {
         this.onEditCallback = callback;
+    }
+
+    public void setOnViewHistoryCallback(Runnable callback) {
+        this.onViewHistoryCallback = callback;
     }
 
     private void populateFields() {
@@ -240,6 +245,13 @@ public class PasswordDetailController implements Initializable {
     @FXML
     private void handleClose() {
         dialogStage.close();
+    }
+
+    @FXML
+    private void handleViewHistory() {
+        if (onViewHistoryCallback != null) {
+            onViewHistoryCallback.run();
+        }
     }
 
     private void showCopiedFeedback(Button button) {
