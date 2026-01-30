@@ -65,6 +65,7 @@ public class MainController implements Initializable {
     private List<PasswordEntryDTO> allPasswords = new ArrayList<>();
     private Long selectedCategoryId = null;
     private boolean isLocked = false;
+    private Stage primaryStage; // Almacenar referencia al stage principal
 
     public MainController(PasswordEntryService passwordEntryService,
                           CategoryService categoryService,
@@ -836,6 +837,9 @@ public class MainController implements Initializable {
                 // Detener monitoreo mientras está bloqueada
                 lockService.stopMonitoring();
 
+                // Almacenar referencia al stage ANTES de cambiar la escena
+                primaryStage = (Stage) passwordTable.getScene().getWindow();
+
                 // Limpiar datos sensibles de memoria
                 clearSensitiveData();
 
@@ -844,21 +848,40 @@ public class MainController implements Initializable {
                 Parent unlockView = loader.load();
 
                 UnlockController controller = loader.getController();
+
                 controller.setOnUnlockSuccess(() -> {
                     // Callback al desbloquear exitosamente
-                    isLocked = false;
-                    loadPasswords(); // Recargar datos
-                    setupLockMonitoring(); // Reiniciar monitoreo
-                    System.out.println("Aplicación desbloqueada correctamente");
+                    try {
+                        // Recargar la vista principal
+                        FXMLLoader mainLoader = fxmlLoaderUtil.getLoader("/fxml/main.fxml");
+                        Parent mainView = mainLoader.load();
+
+                        // Cambiar de vuelta a la vista principal
+                        Scene mainScene = new Scene(mainView);
+                        mainScene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+                        primaryStage.setScene(mainScene);
+                        primaryStage.setTitle("KeyGuard - Gestor de Contraseñas");
+                        primaryStage.centerOnScreen();
+
+                        isLocked = false;
+                        System.out.println("Aplicación desbloqueada correctamente");
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        showError("Error al restaurar la aplicación", e.getMessage());
+                    }
+                });
+
+                // Configurar callback para logout desde pantalla de bloqueo
+                controller.setOnLogout(() -> {
+                    handleLogoutFromLockScreen();
                 });
 
                 // Cambiar a pantalla de desbloqueo
-                Stage stage = (Stage) passwordTable.getScene().getWindow();
                 Scene scene = new Scene(unlockView);
                 scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
-                stage.setScene(scene);
-                stage.setTitle("KeyGuard - Bloqueada");
-                stage.centerOnScreen();
+                primaryStage.setScene(scene);
+                primaryStage.setTitle("KeyGuard - Bloqueada");
+                primaryStage.centerOnScreen();
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -869,22 +892,64 @@ public class MainController implements Initializable {
     }
 
     /**
+     * Maneja el logout cuando se llama desde la pantalla de bloqueo.
+     * Usa el primaryStage almacenado en lugar de obtenerlo de la tabla.
+     */
+    private void handleLogoutFromLockScreen() {
+        try {
+            // Detener monitoreo de inactividad y bloqueo
+            if (inactivityService != null) {
+                inactivityService.stopMonitoring();
+            }
+            if (lockService != null) {
+                lockService.stopMonitoring();
+            }
+
+            authService.logout();
+
+            FXMLLoader loader = fxmlLoaderUtil.getLoader("/fxml/login.fxml");
+            Parent loginView = loader.load();
+
+            Scene scene = new Scene(loginView);
+            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            primaryStage.setScene(scene);
+            primaryStage.setTitle("KeyGuard - Login");
+            primaryStage.centerOnScreen();
+
+            isLocked = false;
+        } catch (Exception e) {
+            e.printStackTrace();
+            showError("Error", "No se pudo cerrar sesión: " + e.getMessage());
+        }
+    }
+
+    /**
      * Limpia datos sensibles de memoria antes de bloquear.
      * Previene que contraseñas queden en memoria mientras está bloqueada.
      */
     private void clearSensitiveData() {
         try {
-            // Limpiar tabla de contraseñas
-            if (passwordTable != null && passwordTable.getItems() != null) {
-                passwordTable.getItems().clear();
+            // Limpiar tabla de contraseñas (usar setItems para evitar problemas con listas inmutables)
+            if (passwordTable != null) {
+                passwordTable.setItems(FXCollections.observableArrayList());
             }
 
             // Limpiar listas en memoria
             if (passwordList != null) {
-                passwordList.clear();
+                try {
+                    passwordList.clear();
+                } catch (UnsupportedOperationException e) {
+                    // Si la lista es inmutable, crear una nueva
+                    passwordList = FXCollections.observableArrayList();
+                }
             }
             if (allPasswords != null) {
-                allPasswords.clear();
+                try {
+                    allPasswords.clear();
+                } catch (UnsupportedOperationException e) {
+                    // Si la lista es inmutable, crear una nueva
+                    allPasswords = new ArrayList<>();
+                }
             }
 
             // Sugerir garbage collection (no garantizado pero ayuda)

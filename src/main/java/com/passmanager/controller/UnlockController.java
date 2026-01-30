@@ -42,6 +42,7 @@ public class UnlockController implements Initializable {
     private final AuthService authService;
     private Stage dialogStage;
     private Runnable onUnlockSuccess;
+    private Runnable onLogout;
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
 
@@ -87,6 +88,10 @@ public class UnlockController implements Initializable {
         this.onUnlockSuccess = callback;
     }
 
+    public void setOnLogout(Runnable callback) {
+        this.onLogout = callback;
+    }
+
     @FXML
     private void handleUnlock() {
         String password = passwordField.getText();
@@ -97,22 +102,16 @@ public class UnlockController implements Initializable {
             return;
         }
 
-        // Validar contraseña
+        // Validar contraseña del usuario actual (sin hacer re-autenticación completa)
         try {
-            String username = authService.getCurrentUser().getUsername();
-            boolean isValid = authService.authenticate(username, password);
+            boolean isValid = authService.verifyCurrentUserPassword(password);
 
             if (isValid) {
                 // Contraseña correcta - desbloquear
                 clearError();
                 passwordField.clear();
 
-                // Cerrar diálogo
-                if (dialogStage != null) {
-                    dialogStage.close();
-                }
-
-                // Ejecutar callback de éxito
+                // Ejecutar callback de éxito (MainController restaura la vista)
                 if (onUnlockSuccess != null) {
                     javafx.application.Platform.runLater(onUnlockSuccess);
                 }
@@ -140,27 +139,19 @@ public class UnlockController implements Initializable {
         alert.setTitle("Cerrar Sesión");
         alert.setHeaderText("¿Cerrar sesión?");
         alert.setContentText("Volverás a la pantalla de inicio de sesión.");
-        alert.initOwner(dialogStage);
+
+        // Obtener la ventana actual para el modal
+        if (passwordField.getScene() != null && passwordField.getScene().getWindow() != null) {
+            alert.initOwner(passwordField.getScene().getWindow());
+        }
 
         alert.showAndWait().ifPresent(response -> {
             if (response == javafx.scene.control.ButtonType.OK) {
                 // Usuario confirmó - cerrar sesión completa
-                if (dialogStage != null) {
-                    dialogStage.close();
+                // Ejecutar callback de logout (MainController maneja la navegación)
+                if (onLogout != null) {
+                    javafx.application.Platform.runLater(onLogout);
                 }
-
-                // Ejecutar logout
-                javafx.application.Platform.runLater(() -> {
-                    try {
-                        authService.logout();
-                        // El callback onUnlockSuccess debería manejar la navegación al login
-                        if (onUnlockSuccess != null) {
-                            onUnlockSuccess.run();
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                });
             }
         });
     }
