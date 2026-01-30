@@ -22,6 +22,7 @@ Aplicación de escritorio segura para la gestión de contraseñas, desarrollada 
 - **Búsqueda y filtrado** - Búsqueda en tiempo real por título o categoría
 - **Paginación** - Vista de tabla optimizada con 20 contraseñas por página
 - **Generador de contraseñas** - Generación segura con opciones configurables
+- **Historial de contraseñas** - Guarda automáticamente las últimas 10 versiones de cada contraseña
 - **Validación de seguridad** - Verificación automática contra base de datos de 12+ mil millones de contraseñas filtradas
 - **Auditoría masiva** - Verificación manual de todas las contraseñas guardadas
 - **Export/Import cifrado** - Backup y restauración con cifrado AES-256-GCM

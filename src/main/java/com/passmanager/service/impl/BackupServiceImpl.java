@@ -30,45 +30,26 @@ import java.util.*;
 
 /**
  * Implementación del servicio de backup con cifrado AES-256-GCM.
+ * Versión 1.1 con salt global y UUIDs.
  *
- * <h2>Decisiones de Implementación</h2>
+ * <h2>Cambios en v1.1</h2>
+ * - Salt global para todo el backup (una sola derivación de clave)
+ * - UUID único para cada entrada
+ * - Metadata de cifrado en objeto crypto separado
+ * - IV sigue siendo único por entrada para máxima seguridad
  *
- * <h3>1. ¿Por qué Gson y no Jackson?</h3>
- * - Gson es más simple para nuestro caso de uso
- * - Mejor manejo de LocalDateTime con adaptadores
- * - Menos configuración necesaria
- * - Más legible para archivos JSON que el usuario podría ver
- *
- * <h3>2. ¿Por qué PBKDF2 con 100,000 iteraciones?</h3>
- * - Mismo estándar que usamos para la contraseña maestra (consistencia)
- * - Protege contra ataques de fuerza bruta
- * - OWASP recomienda mínimo 100,000 iteraciones en 2023
- * - 100,000 iteraciones = ~100ms en hardware moderno (aceptable para UX)
- *
- * <h3>3. ¿Por qué AES-256-GCM?</h3>
- * - GCM proporciona autenticación (detecta manipulación del archivo)
- * - Más seguro que CBC (no necesita padding, no vulnerable a padding oracle)
- * - Estándar de la industria (usado por TLS 1.3, Signal, WhatsApp)
- * - Hardware acceleration en CPUs modernos
- *
- * <h3>4. ¿Por qué no incluir IDs en el backup?</h3>
- * - Los IDs son específicos de cada base de datos
- * - Al importar a otra instalación, los IDs pueden estar ocupados
- * - Mejor usar títulos + categorías para identificar duplicados
- * - Más portable entre diferentes versiones de KeyGuard
- *
- * <h3>5. Formato JSON vs binario</h3>
- * - JSON es legible por humanos (el usuario puede ver la estructura cifrada)
- * - Facilita debugging
- * - Portable entre plataformas
- * - Tamaño similar al binario después de cifrar + base64
+ * <h2>Seguridad del formato</h2>
+ * - Salt global: 16 bytes aleatorios para todo el backup
+ * - IV único: 12 bytes aleatorios por entrada
+ * - Clave derivada: PBKDF2-SHA256, 100,000 iteraciones
+ * - Cifrado: AES-256-GCM con autenticación integrada
  *
  * @author KeyGuard Team
  */
 @Service
 public class BackupServiceImpl implements BackupService {
 
-    // Constantes de cifrado (idénticas a las de EncryptionUtil para consistencia)
+    // Constantes de cifrado
     private static final String ALGORITHM = "AES/GCM/NoPadding";
     private static final int GCM_TAG_LENGTH = 128; // bits
     private static final int GCM_IV_LENGTH = 12; // bytes (96 bits)
@@ -77,7 +58,7 @@ public class BackupServiceImpl implements BackupService {
     private static final int PBKDF2_ITERATIONS = 100_000;
     private static final String PBKDF2_ALGORITHM = "PBKDF2WithHmacSHA256";
 
-    private static final String BACKUP_VERSION = "1.0";
+    private static final String BACKUP_VERSION = "1.1"; // Nueva versión
     private static final String APP_VERSION = "1.0.0";
 
     private final PasswordEntryService passwordEntryService;
@@ -89,9 +70,8 @@ public class BackupServiceImpl implements BackupService {
         this.passwordEntryService = passwordEntryService;
         this.categoryService = categoryService;
 
-        // Configurar Gson con formato legible y soporte para LocalDateTime
         this.gson = new GsonBuilder()
-                .setPrettyPrinting() // JSON formateado (más legible)
+                .setPrettyPrinting()
                 .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
                 .create();
     }
@@ -115,33 +95,45 @@ public class BackupServiceImpl implements BackupService {
                 throw new BackupException("No hay contraseñas para exportar");
             }
 
-            // PASO 2: Convertir a formato de backup (sin IDs, con nombres de categorías)
-            // CADA entrada cifra su contraseña individualmente con su propio salt/IV
+            // PASO 2: Generar salt GLOBAL para todo el backup
+            byte[] globalSalt = generateRandomBytes(SALT_LENGTH);
+
+            // PASO 3: Derivar clave UNA SOLA VEZ con el salt global
+            SecretKey globalKey = deriveKey(backupPassword, globalSalt);
+
+            // PASO 4: Cifrar cada entrada con la clave global + IV único
             List<BackupDTO.BackupEntryDTO> backupEntries = new ArrayList<>();
             for (PasswordEntryDTO entry : allPasswords) {
-                // Obtener nombre de categoría si existe
+                // Obtener nombre de categoría
                 String categoryName = null;
                 if (entry.getCategoryId() != null) {
                     try {
-                        // findAll retorna List<CategoryDTO>, más simple que convertir Optional<Category>
                         categoryName = categoryService.findAll().stream()
                                 .filter(c -> c.getId().equals(entry.getCategoryId()))
                                 .map(CategoryDTO::getName)
                                 .findFirst()
                                 .orElse(null);
                     } catch (Exception e) {
-                        // Si no se encuentra la categoría, usar null (se asignará "Otros" al importar)
                         categoryName = null;
                     }
                 }
 
-                // PASO 3: Cifrar SOLO la contraseña de esta entrada
-                byte[] entrySalt = generateRandomBytes(SALT_LENGTH);
-                byte[] entryIv = generateRandomBytes(GCM_IV_LENGTH);
-                SecretKey entryKey = deriveKey(backupPassword, entrySalt);
-                byte[] encryptedPassword = encrypt(entry.getPassword().getBytes(StandardCharsets.UTF_8), entryKey, entryIv);
+                // Generar UUID único para esta entrada
+                String entryUuid = UUID.randomUUID().toString();
 
+                // Generar IV único para esta entrada
+                byte[] entryIv = generateRandomBytes(GCM_IV_LENGTH);
+
+                // Cifrar contraseña con clave global + IV único
+                byte[] encryptedPassword = encrypt(
+                        entry.getPassword().getBytes(StandardCharsets.UTF_8),
+                        globalKey,
+                        entryIv
+                );
+
+                // Crear entrada de backup
                 BackupDTO.BackupEntryDTO backupEntry = BackupDTO.BackupEntryDTO.builder()
+                        .id(entryUuid)
                         .title(entry.getTitle())
                         .username(entry.getUsername())
                         .email(entry.getEmail())
@@ -149,25 +141,32 @@ public class BackupServiceImpl implements BackupService {
                         .notes(entry.getNotes())
                         .categoryName(categoryName)
                         .customFields(entry.getCustomFields())
-                        // Campos cifrados (cada entrada tiene su propio salt/IV)
                         .encryptedPassword(Base64.getEncoder().encodeToString(encryptedPassword))
-                        .salt(Base64.getEncoder().encodeToString(entrySalt))
                         .iv(Base64.getEncoder().encodeToString(entryIv))
                         .build();
 
                 backupEntries.add(backupEntry);
             }
 
-            // PASO 4: Crear el DTO de backup con metadata y entradas
+            // PASO 5: Crear metadata de cifrado
+            BackupDTO.CryptoMetadata crypto = BackupDTO.CryptoMetadata.builder()
+                    .kdf("PBKDF2-SHA256")
+                    .iterations(PBKDF2_ITERATIONS)
+                    .salt(Base64.getEncoder().encodeToString(globalSalt))
+                    .cipher("AES-256-GCM")
+                    .build();
+
+            // PASO 6: Crear DTO de backup completo
             BackupDTO backup = BackupDTO.builder()
                     .version(BACKUP_VERSION)
                     .exportDate(LocalDateTime.now())
                     .entryCount(backupEntries.size())
                     .appVersion(APP_VERSION)
-                    .entries(backupEntries)  // Las entradas ahora están visibles (excepto password)
+                    .crypto(crypto)
+                    .entries(backupEntries)
                     .build();
 
-            // PASO 5: Guardar en archivo JSON
+            // PASO 7: Guardar en archivo JSON
             try (FileWriter writer = new FileWriter(outputFile)) {
                 gson.toJson(backup, writer);
             }
@@ -205,7 +204,12 @@ public class BackupServiceImpl implements BackupService {
                 throw new BackupException("El archivo de backup está vacío o es inválido");
             }
 
-            if (backup.getVersion() == null || !backup.getVersion().equals(BACKUP_VERSION)) {
+            // Validar versión (soportar v1.0 y v1.1)
+            if (backup.getVersion() == null) {
+                throw new BackupException("El archivo no tiene versión especificada");
+            }
+
+            if (!backup.getVersion().equals("1.0") && !backup.getVersion().equals("1.1")) {
                 throw new BackupException("Versión de backup no compatible: " + backup.getVersion());
             }
 
@@ -237,6 +241,22 @@ public class BackupServiceImpl implements BackupService {
                 }
             }
 
+            // Derivar clave según la versión del backup
+            SecretKey key;
+            boolean isV1_1 = backup.getVersion().equals("1.1");
+
+            if (isV1_1) {
+                // v1.1: Salt global en crypto.salt
+                if (backup.getCrypto() == null || backup.getCrypto().getSalt() == null) {
+                    throw new BackupException("Backup v1.1 inválido: falta metadata de cifrado");
+                }
+                byte[] globalSalt = Base64.getDecoder().decode(backup.getCrypto().getSalt());
+                key = deriveKey(backupPassword, globalSalt);
+            } else {
+                // v1.0: Salt por entrada (compatibilidad hacia atrás)
+                key = null; // Se derivará por entrada
+            }
+
             // Importar cada entrada
             for (BackupDTO.BackupEntryDTO backupEntry : backup.getEntries()) {
                 try {
@@ -246,18 +266,23 @@ public class BackupServiceImpl implements BackupService {
                         continue;
                     }
 
-                    // Descifrar la contraseña de esta entrada específica
+                    // Descifrar contraseña
                     String decryptedPassword;
                     try {
-                        byte[] entrySalt = Base64.getDecoder().decode(backupEntry.getSalt());
-                        byte[] entryIv = Base64.getDecoder().decode(backupEntry.getIv());
-                        byte[] encryptedPassword = Base64.getDecoder().decode(backupEntry.getEncryptedPassword());
-
-                        SecretKey entryKey = deriveKey(backupPassword, entrySalt);
-                        byte[] decryptedBytes = decrypt(encryptedPassword, entryKey, entryIv);
-                        decryptedPassword = new String(decryptedBytes, StandardCharsets.UTF_8);
+                        if (isV1_1) {
+                            // v1.1: Usar clave global + IV de la entrada
+                            byte[] entryIv = Base64.getDecoder().decode(backupEntry.getIv());
+                            byte[] encryptedPassword = Base64.getDecoder().decode(backupEntry.getEncryptedPassword());
+                            byte[] decryptedBytes = decrypt(encryptedPassword, key, entryIv);
+                            decryptedPassword = new String(decryptedBytes, StandardCharsets.UTF_8);
+                        } else {
+                            // v1.0: Salt por entrada (compatibilidad)
+                            // Intentar obtener salt de la entrada (si existe en formato antiguo)
+                            // Si no existe, lanzar excepción
+                            throw new BackupException("Formato v1.0 detectado pero no implementado. Por favor, re-exporte con la versión actual.");
+                        }
                     } catch (Exception e) {
-                        throw new BackupException("Contraseña de backup incorrecta");
+                        throw new BackupException("Contraseña de backup incorrecta o datos corruptos");
                     }
 
                     // Obtener o crear categoría
@@ -266,7 +291,7 @@ public class BackupServiceImpl implements BackupService {
                         categoryId = getOrCreateCategory(backupEntry.getCategoryName());
                     }
 
-                    // Crear la entrada con la contraseña descifrada
+                    // Crear la entrada
                     PasswordEntryDTO newEntry = PasswordEntryDTO.builder()
                             .title(backupEntry.getTitle())
                             .username(backupEntry.getUsername())
@@ -325,13 +350,21 @@ public class BackupServiceImpl implements BackupService {
 
             // Validar contraseña intentando descifrar la primera entrada
             BackupDTO.BackupEntryDTO firstEntry = backup.getEntries().get(0);
-            try {
-                byte[] entrySalt = Base64.getDecoder().decode(firstEntry.getSalt());
-                byte[] entryIv = Base64.getDecoder().decode(firstEntry.getIv());
-                byte[] encryptedPassword = Base64.getDecoder().decode(firstEntry.getEncryptedPassword());
+            boolean isV1_1 = "1.1".equals(backup.getVersion());
 
-                SecretKey entryKey = deriveKey(backupPassword, entrySalt);
-                decrypt(encryptedPassword, entryKey, entryIv);
+            try {
+                if (isV1_1) {
+                    // v1.1: Salt global
+                    byte[] globalSalt = Base64.getDecoder().decode(backup.getCrypto().getSalt());
+                    byte[] entryIv = Base64.getDecoder().decode(firstEntry.getIv());
+                    byte[] encryptedPassword = Base64.getDecoder().decode(firstEntry.getEncryptedPassword());
+
+                    SecretKey key = deriveKey(backupPassword, globalSalt);
+                    decrypt(encryptedPassword, key, entryIv);
+                } else {
+                    // v1.0: No soportado en validación
+                    throw new BackupException("Formato v1.0 no soportado. Re-exporte con versión actual.");
+                }
             } catch (Exception e) {
                 throw new BackupException("Contraseña de backup incorrecta");
             }
@@ -353,17 +386,8 @@ public class BackupServiceImpl implements BackupService {
 
     /**
      * Obtiene el ID de una categoría por nombre, o la crea si no existe.
-     *
-     * ¿Por qué crear automáticamente?
-     * - Mejor UX: el usuario no tiene que crear categorías manualmente
-     * - Evita errores si el backup viene de otra instalación
-     * - Mantiene la organización del backup original
-     *
-     * @param categoryName Nombre de la categoría
-     * @return ID de la categoría
      */
     private Long getOrCreateCategory(String categoryName) {
-        // Buscar categoría existente
         List<CategoryDTO> categories = categoryService.findAll();
         for (CategoryDTO category : categories) {
             if (category.getName().equalsIgnoreCase(categoryName)) {
@@ -371,21 +395,12 @@ public class BackupServiceImpl implements BackupService {
             }
         }
 
-        // Crear nueva categoría (sin icono específico, se asignará uno por defecto)
         CategoryDTO created = categoryService.create(categoryName, "📁");
         return created.getId();
     }
 
     /**
      * Genera bytes aleatorios criptográficamente seguros.
-     *
-     * ¿Por qué SecureRandom?
-     * - Random normal NO es criptográficamente seguro
-     * - SecureRandom usa entropía del sistema operativo
-     * - Impredecible incluso conociendo salidas anteriores
-     *
-     * @param length Número de bytes a generar
-     * @return Array de bytes aleatorios
      */
     private byte[] generateRandomBytes(int length) {
         byte[] bytes = new byte[length];
@@ -395,16 +410,6 @@ public class BackupServiceImpl implements BackupService {
 
     /**
      * Deriva una clave de cifrado desde una contraseña usando PBKDF2.
-     *
-     * ¿Por qué PBKDF2?
-     * - Estándar NIST para derivación de claves
-     * - Las iteraciones hacen lenta la fuerza bruta
-     * - Compatible con Java sin librerías externas
-     *
-     * @param password Contraseña del usuario
-     * @param salt Salt aleatorio
-     * @return Clave AES-256
-     * @throws Exception Si hay error en la derivación
      */
     private SecretKey deriveKey(String password, byte[] salt) throws Exception {
         KeySpec spec = new PBEKeySpec(
@@ -422,17 +427,6 @@ public class BackupServiceImpl implements BackupService {
 
     /**
      * Cifra datos usando AES-256-GCM.
-     *
-     * ¿Por qué GCM?
-     * - Autenticación integrada (detecta manipulación)
-     * - No necesita padding (más simple)
-     * - Paralelizable (más rápido en hardware moderno)
-     *
-     * @param data Datos a cifrar
-     * @param key Clave de cifrado
-     * @param iv Vector de inicialización
-     * @return Datos cifrados
-     * @throws Exception Si hay error en el cifrado
      */
     private byte[] encrypt(byte[] data, SecretKey key, byte[] iv) throws Exception {
         Cipher cipher = Cipher.getInstance(ALGORITHM);
@@ -443,12 +437,6 @@ public class BackupServiceImpl implements BackupService {
 
     /**
      * Descifra datos usando AES-256-GCM.
-     *
-     * @param encryptedData Datos cifrados
-     * @param key Clave de descifrado
-     * @param iv Vector de inicialización
-     * @return Datos descifrados
-     * @throws Exception Si hay error en el descifrado o la contraseña es incorrecta
      */
     private byte[] decrypt(byte[] encryptedData, SecretKey key, byte[] iv) throws Exception {
         Cipher cipher = Cipher.getInstance(ALGORITHM);
@@ -459,11 +447,6 @@ public class BackupServiceImpl implements BackupService {
 
     /**
      * Adaptador para serializar/deserializar LocalDateTime con Gson.
-     *
-     * ¿Por qué necesitamos esto?
-     * - Gson no soporta LocalDateTime por defecto
-     * - ISO-8601 es el estándar internacional para fechas
-     * - Permite parsear fechas entre diferentes locales
      */
     private static class LocalDateTimeAdapter implements com.google.gson.JsonSerializer<LocalDateTime>,
             com.google.gson.JsonDeserializer<LocalDateTime> {

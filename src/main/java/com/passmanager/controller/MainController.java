@@ -59,10 +59,12 @@ public class MainController implements Initializable {
     private final DialogUtil dialogUtil;
     private final FxmlLoaderUtil fxmlLoaderUtil;
     private final com.passmanager.service.InactivityService inactivityService;
+    private final com.passmanager.service.LockService lockService;
 
     private ObservableList<PasswordEntryDTO> passwordList = FXCollections.observableArrayList();
     private List<PasswordEntryDTO> allPasswords = new ArrayList<>();
     private Long selectedCategoryId = null;
+    private boolean isLocked = false;
 
     public MainController(PasswordEntryService passwordEntryService,
                           CategoryService categoryService,
@@ -70,7 +72,8 @@ public class MainController implements Initializable {
                           ClipboardUtil clipboardUtil,
                           DialogUtil dialogUtil,
                           FxmlLoaderUtil fxmlLoaderUtil,
-                          com.passmanager.service.InactivityService inactivityService) {
+                          com.passmanager.service.InactivityService inactivityService,
+                          com.passmanager.service.LockService lockService) {
         this.passwordEntryService = passwordEntryService;
         this.categoryService = categoryService;
         this.authService = authService;
@@ -78,6 +81,7 @@ public class MainController implements Initializable {
         this.dialogUtil = dialogUtil;
         this.fxmlLoaderUtil = fxmlLoaderUtil;
         this.inactivityService = inactivityService;
+        this.lockService = lockService;
     }
 
     @Override
@@ -88,6 +92,7 @@ public class MainController implements Initializable {
         loadCategories();
         loadPasswords();
         setupInactivityMonitoring();
+        setupLockMonitoring();
     }
 
     private void loadCurrentUser() {
@@ -418,6 +423,7 @@ public class MainController implements Initializable {
             PasswordDetailController detailController = loader.getController();
             detailController.setEntry(fullEntry);
             detailController.setOnEditCallback(() -> openPasswordForm(fullEntry));
+            detailController.setOnViewHistoryCallback(() -> handleViewHistory(fullEntry));
 
             Stage dialogStage = new Stage();
             dialogStage.setTitle("Detalle: " + entry.getTitle());
@@ -438,6 +444,41 @@ public class MainController implements Initializable {
         } catch (Exception e) {
             e.printStackTrace();
             showError("Error", "No se pudo abrir el detalle: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Abre el diálogo de historial de contraseñas para una entrada.
+     *
+     * Muestra todas las versiones anteriores de la contraseña con:
+     * - Fecha de cambio
+     * - Botones para copiar y mostrar cada versión
+     * - Solo mantiene las últimas 10 versiones
+     */
+    public void handleViewHistory(PasswordEntryDTO entry) {
+        try {
+            FXMLLoader loader = fxmlLoaderUtil.getLoader("/fxml/password-history-dialog.fxml");
+            Parent historyView = loader.load();
+
+            PasswordHistoryDialogController controller = loader.getController();
+            controller.setPasswordEntry(entry);
+
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle("Historial: " + entry.getTitle());
+            dialogStage.initModality(Modality.APPLICATION_MODAL);
+            dialogStage.initOwner(passwordTable.getScene().getWindow());
+
+            Scene scene = new Scene(historyView);
+            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            dialogStage.setScene(scene);
+            dialogStage.setResizable(false);
+
+            controller.setDialogStage(dialogStage);
+            dialogStage.showAndWait();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showError("Error", "No se pudo abrir el historial: " + e.getMessage());
         }
     }
 
@@ -741,5 +782,117 @@ public class MainController implements Initializable {
                 e.printStackTrace();
             }
         });
+    }
+
+    /**
+     * Configura el monitoreo de bloqueo automático.
+     * Se activa por minimización de ventana o inactividad (2 min).
+     */
+    private void setupLockMonitoring() {
+        // Iniciar monitoreo de bloqueo con callback
+        lockService.startMonitoring(this::handleLock);
+
+        // Configurar timeouts
+        lockService.setInactivityTimeout(2); // 2 minutos
+        lockService.setLockOnMinimize(true);
+
+        // Agregar listeners para eventos de ventana y actividad
+        javafx.application.Platform.runLater(() -> {
+            if (passwordTable.getScene() != null) {
+                Stage stage = (Stage) passwordTable.getScene().getWindow();
+
+                // Detectar minimización de ventana
+                stage.iconifiedProperty().addListener((obs, wasIconified, isNowIconified) -> {
+                    if (isNowIconified && lockService.isLockOnMinimizeEnabled()) {
+                        System.out.println("Ventana minimizada - bloqueando aplicación");
+                        lockService.lockNow();
+                    }
+                });
+
+                // Resetear timer en cualquier actividad del usuario
+                passwordTable.getScene().setOnMouseMoved(event -> lockService.resetTimer());
+                passwordTable.getScene().setOnMousePressed(event -> lockService.resetTimer());
+                passwordTable.getScene().setOnMouseClicked(event -> lockService.resetTimer());
+                passwordTable.getScene().setOnKeyPressed(event -> lockService.resetTimer());
+                passwordTable.getScene().setOnKeyReleased(event -> lockService.resetTimer());
+                passwordTable.getScene().setOnScroll(event -> lockService.resetTimer());
+            }
+        });
+    }
+
+    /**
+     * Maneja el bloqueo de la aplicación.
+     * Muestra pantalla de desbloqueo en lugar de cerrar sesión.
+     */
+    private void handleLock() {
+        if (isLocked) {
+            return; // Ya está bloqueada
+        }
+
+        isLocked = true;
+
+        javafx.application.Platform.runLater(() -> {
+            try {
+                // Detener monitoreo mientras está bloqueada
+                lockService.stopMonitoring();
+
+                // Limpiar datos sensibles de memoria
+                clearSensitiveData();
+
+                // Cargar pantalla de desbloqueo
+                FXMLLoader loader = fxmlLoaderUtil.getLoader("/fxml/unlock.fxml");
+                Parent unlockView = loader.load();
+
+                UnlockController controller = loader.getController();
+                controller.setOnUnlockSuccess(() -> {
+                    // Callback al desbloquear exitosamente
+                    isLocked = false;
+                    loadPasswords(); // Recargar datos
+                    setupLockMonitoring(); // Reiniciar monitoreo
+                    System.out.println("Aplicación desbloqueada correctamente");
+                });
+
+                // Cambiar a pantalla de desbloqueo
+                Stage stage = (Stage) passwordTable.getScene().getWindow();
+                Scene scene = new Scene(unlockView);
+                scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+                stage.setScene(scene);
+                stage.setTitle("KeyGuard - Bloqueada");
+                stage.centerOnScreen();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                // Si falla, cerrar sesión como fallback
+                handleLogout();
+            }
+        });
+    }
+
+    /**
+     * Limpia datos sensibles de memoria antes de bloquear.
+     * Previene que contraseñas queden en memoria mientras está bloqueada.
+     */
+    private void clearSensitiveData() {
+        try {
+            // Limpiar tabla de contraseñas
+            if (passwordTable != null && passwordTable.getItems() != null) {
+                passwordTable.getItems().clear();
+            }
+
+            // Limpiar listas en memoria
+            if (passwordList != null) {
+                passwordList.clear();
+            }
+            if (allPasswords != null) {
+                allPasswords.clear();
+            }
+
+            // Sugerir garbage collection (no garantizado pero ayuda)
+            System.gc();
+
+            System.out.println("Datos sensibles limpiados de memoria");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

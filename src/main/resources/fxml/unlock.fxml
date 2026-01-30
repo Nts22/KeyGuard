@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.passmanager.controller.UnlockController"
+      prefHeight="400" prefWidth="500"
+      spacing="25"
+      alignment="CENTER"
+      style="-fx-background-color: linear-gradient(to bottom, #667eea 0%, #764ba2 100%);">
+
+    <padding>
+        <Insets topRightBottomLeft="40"/>
+    </padding>
+
+    <!-- Contenedor central -->
+    <VBox alignment="CENTER" spacing="20" maxWidth="350"
+          style="-fx-background-color: rgba(255, 255, 255, 0.95); -fx-background-radius: 15; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 20, 0, 0, 5);">
+        <padding>
+            <Insets topRightBottomLeft="35"/>
+        </padding>
+
+        <!-- Icono de candado -->
+        <Label text="🔒" style="-fx-font-size: 64px;"/>
+
+        <!-- Título -->
+        <Label text="Aplicación Bloqueada"
+               style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #2d3748;"/>
+
+        <!-- Usuario e info de bloqueo -->
+        <VBox spacing="5" alignment="CENTER">
+            <Label fx:id="usernameLabel" text="Usuario"
+                   style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #4a5568;"/>
+            <Label fx:id="lockedTimeLabel" text="Bloqueado a las 10:30"
+                   style="-fx-font-size: 13px; -fx-text-fill: #718096;"/>
+        </VBox>
+
+        <!-- Separador -->
+        <Separator prefWidth="200"/>
+
+        <!-- Campo de contraseña -->
+        <VBox spacing="8" VBox.vgrow="NEVER">
+            <Label text="Ingresa tu contraseña para desbloquear"
+                   style="-fx-font-size: 14px; -fx-text-fill: #4a5568;"/>
+
+            <PasswordField fx:id="passwordField"
+                          promptText="Contraseña maestra"
+                          prefHeight="40"
+                          style="-fx-font-size: 14px; -fx-background-radius: 8; -fx-border-color: #cbd5e0; -fx-border-radius: 8; -fx-border-width: 1;"/>
+
+            <!-- Mensaje de error -->
+            <Label fx:id="errorLabel"
+                   text="Error"
+                   visible="false"
+                   managed="false"
+                   wrapText="true"
+                   style="-fx-text-fill: #e53e3e; -fx-font-size: 13px; -fx-font-weight: bold;"/>
+        </VBox>
+
+        <!-- Botones -->
+        <VBox spacing="10" VBox.vgrow="NEVER">
+            <Button text="Desbloquear"
+                    onAction="#handleUnlock"
+                    prefWidth="280"
+                    prefHeight="45"
+                    defaultButton="true"
+                    style="-fx-background-color: #667eea; -fx-text-fill: white; -fx-font-size: 15px; -fx-font-weight: bold; -fx-background-radius: 8; -fx-cursor: hand;"/>
+
+            <Button text="Cerrar Sesión"
+                    onAction="#handleLogout"
+                    prefWidth="280"
+                    prefHeight="40"
+                    style="-fx-background-color: transparent; -fx-text-fill: #718096; -fx-font-size: 13px; -fx-border-color: #cbd5e0; -fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8; -fx-cursor: hand;"/>
+        </VBox>
+
+        <!-- Info adicional -->
+        <Label text="Por tu seguridad, la aplicación se bloqueó automáticamente"
+               wrapText="true"
+               maxWidth="300"
+               style="-fx-font-size: 12px; -fx-text-fill: #a0aec0; -fx-text-alignment: center;"/>
+    </VBox>
+
+    <!-- Leyenda inferior -->
+    <Label text="🔐 KeyGuard - Password Manager Seguro"
+           style="-fx-text-fill: rgba(255, 255, 255, 0.9); -fx-font-size: 12px;"/>
+</VBox>

@@ -9,36 +9,55 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * DTO para el formato de backup de KeyGuard.
+ * DTO para el formato de backup de KeyGuard versión 1.1.
  *
- * <h2>¿Por qué este formato?</h2>
+ * <h2>Nuevo formato (v1.1)</h2>
  *
- * <h3>Metadata visible</h3>
- * - **version**: Para compatibilidad futura (si cambiamos el formato)
- * - **exportDate**: Para saber cuándo se hizo el backup
- * - **entryCount**: Validación rápida
- * - **appVersion**: Para debugging si hay problemas de compatibilidad
- * - **entries**: Lista de entradas con campos visibles excepto la contraseña
+ * <h3>Estructura del backup</h3>
+ * ```json
+ * {
+ *   "version": "1.1",
+ *   "exportDate": "2024-01-30T10:30:00",
+ *   "entryCount": 15,
+ *   "appVersion": "1.0.0",
+ *   "crypto": {
+ *     "kdf": "PBKDF2-SHA256",
+ *     "iterations": 100000,
+ *     "salt": "BASE64_SALT",
+ *     "cipher": "AES-256-GCM"
+ *   },
+ *   "entries": [
+ *     {
+ *       "id": "uuid-1234-5678",
+ *       "title": "Facebook",
+ *       "username": "user@email.com",
+ *       "email": "user@email.com",
+ *       "url": "https://facebook.com",
+ *       "notes": "Mi cuenta",
+ *       "categoryName": "Redes Sociales",
+ *       "customFields": [],
+ *       "encryptedPassword": "BASE64_ENCRYPTED",
+ *       "iv": "BASE64_IV"
+ *     }
+ *   ]
+ * }
+ * ```
  *
- * <h3>Campos visibles vs cifrados</h3>
- * - **Visibles**: title, username, email, url, notes, categoryName, customFields
- * - **Cifrado**: Solo el campo password (encryptedPassword por entrada)
- * - **salt/iv**: Únicos por entrada para máxima seguridad
+ * <h3>Cambios respecto a v1.0</h3>
+ * - **crypto**: Metadata de cifrado global (antes no existía)
+ * - **salt**: Ahora global para todo el backup (antes era por entrada)
+ * - **id**: UUID único para cada entrada (antes no existía)
+ * - **iv**: Sigue siendo único por entrada
  *
- * <h2>Proceso de cifrado</h2>
- * 1. Usuario proporciona contraseña de backup
- * 2. Para cada entrada:
- *    - Generamos salt aleatorio (16 bytes)
- *    - Derivamos clave AES-256 usando PBKDF2-SHA256 (100,000 iteraciones)
- *    - Generamos IV aleatorio (12 bytes)
- *    - Ciframos SOLO la contraseña con AES-256-GCM
- * 3. Guardamos: metadata + entries con campos visibles + contraseñas cifradas
+ * <h3>¿Por qué salt global?</h3>
+ * - Una sola derivación de clave (más rápido)
+ * - Formato más común en la industria
+ * - Sigue siendo seguro (el IV único garantiza unicidad de cifrado)
  *
- * <h2>¿Por qué este enfoque híbrido?</h2>
- * - Puedes ver qué contraseñas tienes sin descifrar
- * - Las contraseñas reales están protegidas
- * - Fácil de auditar y buscar entradas específicas
- * - Cada contraseña tiene su propio salt/IV para máxima seguridad
+ * <h3>¿Por qué UUID por entrada?</h3>
+ * - Identificación única más allá del título
+ * - Facilita tracking y debugging
+ * - Compatible con futuros features (sync, merge, etc.)
  *
  * @author KeyGuard Team
  */
@@ -50,7 +69,7 @@ public class BackupDTO {
 
     /**
      * Versión del formato de backup.
-     * Permite manejar cambios de formato en futuras versiones.
+     * v1.1: Nuevo formato con crypto global y UUIDs
      */
     private String version;
 
@@ -61,39 +80,79 @@ public class BackupDTO {
 
     /**
      * Número de entradas incluidas en el backup.
-     * Útil para validación sin necesidad de descifrar.
      */
     private int entryCount;
 
     /**
      * Versión de KeyGuard que generó el backup.
-     * Útil para debugging y compatibilidad.
      */
     private String appVersion;
 
     /**
+     * Metadata de cifrado (nuevo en v1.1).
+     * Contiene información sobre el algoritmo y parámetros usados.
+     */
+    private CryptoMetadata crypto;
+
+    /**
      * Lista de entradas del backup.
-     * Todos los campos son visibles excepto la contraseña que está cifrada.
+     * Todos los campos son visibles excepto la contraseña cifrada.
      */
     private List<BackupEntryDTO> entries;
 
     /**
+     * Metadata de cifrado del backup.
+     * Incluye algoritmos usados y salt global.
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CryptoMetadata {
+        /**
+         * Algoritmo de derivación de clave.
+         * Valor: "PBKDF2-SHA256"
+         */
+        private String kdf;
+
+        /**
+         * Número de iteraciones para PBKDF2.
+         * Valor: 100000
+         */
+        private int iterations;
+
+        /**
+         * Salt global para todo el backup (Base64, 16 bytes).
+         * Se usa junto con la contraseña de backup para derivar la clave AES.
+         */
+        private String salt;
+
+        /**
+         * Algoritmo de cifrado usado.
+         * Valor: "AES-256-GCM"
+         */
+        private String cipher;
+    }
+
+    /**
      * DTO para una entrada individual en el backup.
-     * No incluye IDs ya que pueden cambiar al importar.
      *
-     * Campos VISIBLES en el JSON:
-     * - title, username, email, url, notes, categoryName, customFields
-     *
-     * Campos CIFRADOS:
-     * - encryptedPassword: La contraseña cifrada con AES-256-GCM
-     * - salt: Salt único para esta entrada (16 bytes, Base64)
-     * - iv: IV único para esta entrada (12 bytes, Base64)
+     * Campos VISIBLES: title, username, email, url, notes, categoryName, customFields
+     * Campos CIFRADOS: encryptedPassword
+     * Campos de SEGURIDAD: id, iv
      */
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class BackupEntryDTO {
+        /**
+         * Identificador único de la entrada (UUID).
+         * Generado al exportar, permite identificar entradas más allá del título.
+         */
+        private String id;
+
+        // Campos visibles (texto claro)
         private String title;
         private String username;
         private String email;
@@ -102,9 +161,17 @@ public class BackupDTO {
         private String categoryName;
         private List<PasswordEntryDTO.CustomFieldDTO> customFields;
 
-        // Campos de seguridad (por entrada)
-        private String encryptedPassword;  // Contraseña cifrada (Base64)
-        private String salt;               // Salt para derivar clave (Base64, 16 bytes)
-        private String iv;                 // IV para cifrado (Base64, 12 bytes)
+        // Campos cifrados (solo la contraseña)
+        /**
+         * Contraseña cifrada con AES-256-GCM (Base64).
+         * Se descifra usando: crypto.salt + contraseña de backup + este IV.
+         */
+        private String encryptedPassword;
+
+        /**
+         * Vector de Inicialización único para esta entrada (Base64, 12 bytes).
+         * Garantiza que incluso contraseñas idénticas se cifren de forma diferente.
+         */
+        private String iv;
     }
 }

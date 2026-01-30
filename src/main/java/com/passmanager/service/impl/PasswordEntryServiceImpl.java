@@ -6,7 +6,9 @@ import com.passmanager.model.dto.PasswordEntryDTO;
 import com.passmanager.model.entity.PasswordEntry;
 import com.passmanager.model.entity.User;
 import com.passmanager.repository.PasswordEntryRepository;
+import com.passmanager.service.EncryptionService;
 import com.passmanager.service.PasswordEntryService;
+import com.passmanager.service.PasswordHistoryService;
 import com.passmanager.service.UserService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,13 +22,19 @@ public class PasswordEntryServiceImpl implements PasswordEntryService {
     private final PasswordEntryRepository passwordEntryRepository;
     private final PasswordEntryMapper passwordEntryMapper;
     private final UserService userService;
+    private final PasswordHistoryService passwordHistoryService;
+    private final EncryptionService encryptionService;
 
     public PasswordEntryServiceImpl(PasswordEntryRepository passwordEntryRepository,
                                     PasswordEntryMapper passwordEntryMapper,
-                                    UserService userService) {
+                                    UserService userService,
+                                    PasswordHistoryService passwordHistoryService,
+                                    EncryptionService encryptionService) {
         this.passwordEntryRepository = passwordEntryRepository;
         this.passwordEntryMapper = passwordEntryMapper;
         this.userService = userService;
+        this.passwordHistoryService = passwordHistoryService;
+        this.encryptionService = encryptionService;
     }
 
     private User getCurrentUser() {
@@ -92,6 +100,14 @@ public class PasswordEntryServiceImpl implements PasswordEntryService {
     public PasswordEntryDTO update(Long id, PasswordEntryDTO dto) {
         PasswordEntry entry = passwordEntryRepository.findByIdAndUser(id, getCurrentUser())
                 .orElseThrow(() -> new ResourceNotFoundException("PasswordEntry", id));
+
+        // Guardar contraseña antigua en historial si cambió
+        String oldPassword = encryptionService.decrypt(entry.getPassword());
+        String newPassword = dto.getPassword();
+
+        if (!oldPassword.equals(newPassword)) {
+            passwordHistoryService.savePasswordHistory(entry, oldPassword);
+        }
 
         entry.getCustomFields().clear();
         passwordEntryMapper.updateEntityFromDTO(entry, dto);
