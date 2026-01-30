@@ -186,6 +186,22 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    public boolean verifyCurrentUserPassword(String password) {
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            throw new AuthenticationException("No hay un usuario autenticado");
+        }
+
+        // Simplemente verificar la contraseña contra el hash almacenado
+        // NO hacemos logout/login, solo verificamos
+        return encryptionService.verifyPassword(
+                password,
+                currentUser.getSalt(),
+                currentUser.getPasswordHash()
+        );
+    }
+
+    @Override
     public boolean isLoginBlocked(String username) {
         return loginAttemptService.isBlocked(username);
     }

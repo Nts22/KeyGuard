@@ -38,6 +38,15 @@ public interface AuthService {
 
     User getCurrentUser();
 
+    /**
+     * Verifica la contraseña del usuario actual sin hacer logout/login.
+     * Útil para desbloquear la aplicación sin perder el estado de autenticación.
+     *
+     * @param password Contraseña a verificar
+     * @return true si la contraseña es correcta
+     */
+    boolean verifyCurrentUserPassword(String password);
+
     boolean isLoginBlocked(String username);
 
     int getRemainingLoginAttempts(String username);
