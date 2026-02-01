@@ -96,7 +96,23 @@
 
                 <Region HBox.hgrow="ALWAYS"/>
 
-                <Button text="+ Nueva Entrada" onAction="#handleNewEntry"/>
+                <!-- Indicador de estado de bóveda -->
+                <HBox spacing="8" alignment="CENTER" styleClass="vault-status-container">
+                    <Label fx:id="vaultStatusLabel" text="🟢 Desbloqueada"
+                           styleClass="vault-status-label"/>
+                    <Separator orientation="VERTICAL" prefHeight="20" style="-fx-background-color: #86efac;"/>
+                    <Label fx:id="autoLockTimerLabel" text="⏱️ 2 min"
+                           styleClass="auto-lock-timer"/>
+                    <Button fx:id="manualLockBtn" text="🔒"
+                            styleClass="manual-lock-btn"
+                            onAction="#handleManualLock"/>
+                </HBox>
+
+                <Separator orientation="VERTICAL" prefHeight="30"/>
+
+                <Button text="+" onAction="#handleNewEntry"
+                        styleClass="button-add-entry"
+                        prefWidth="45" prefHeight="38"/>
             </HBox>
 
             <!-- Tabla de contraseñas - altura fija para 20 filas -->

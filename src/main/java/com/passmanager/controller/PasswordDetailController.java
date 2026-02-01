@@ -2,6 +2,8 @@ package com.passmanager.controller;
 
 import com.passmanager.model.dto.PasswordEntryDTO;
 import com.passmanager.util.ClipboardUtil;
+import com.passmanager.util.ToastUtil;
+import javafx.animation.PauseTransition;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
@@ -10,6 +12,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import org.springframework.stereotype.Component;
 
 import java.awt.Desktop;
@@ -39,17 +42,21 @@ public class PasswordDetailController implements Initializable {
     @FXML private Label updatedAtLabel;
 
     private final ClipboardUtil clipboardUtil;
+    private final ToastUtil toastUtil;
 
     private Stage dialogStage;
     private PasswordEntryDTO entry;
     private boolean passwordVisible = false;
     private Runnable onEditCallback;
     private Runnable onViewHistoryCallback;
+    private PauseTransition passwordAutoHideTimer;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final int PASSWORD_AUTO_HIDE_SECONDS = 10;
 
-    public PasswordDetailController(ClipboardUtil clipboardUtil) {
+    public PasswordDetailController(ClipboardUtil clipboardUtil, ToastUtil toastUtil) {
         this.clipboardUtil = clipboardUtil;
+        this.toastUtil = toastUtil;
     }
 
     @Override
@@ -141,6 +148,12 @@ public class PasswordDetailController implements Initializable {
                 copyBtn.setOnAction(e -> {
                     if (field.isSensitive()) {
                         clipboardUtil.copyToClipboardWithAutoClear(field.getFieldValue());
+                        // Mostrar toast para campos sensibles
+                        int clearDelaySeconds = clipboardUtil.getClearDelaySeconds();
+                        toastUtil.showSuccess(
+                            dialogStage.getOwner(),
+                            "📋 Campo copiado (se borrará en " + clearDelaySeconds + "s)"
+                        );
                     } else {
                         clipboardUtil.copyToClipboard(field.getFieldValue());
                     }
@@ -181,9 +194,31 @@ public class PasswordDetailController implements Initializable {
     @FXML
     private void handleTogglePassword() {
         passwordVisible = !passwordVisible;
+
+        // Cancelar timer anterior si existe
+        if (passwordAutoHideTimer != null) {
+            passwordAutoHideTimer.stop();
+        }
+
         if (passwordVisible) {
             passwordLabel.setText(entry.getPassword());
             togglePasswordBtn.setText("🔒");
+
+            // Mostrar notificación de seguridad
+            toastUtil.showWarning(
+                dialogStage.getOwner(),
+                "La contraseña se ocultará automáticamente en " + PASSWORD_AUTO_HIDE_SECONDS + "s"
+            );
+
+            // Auto-ocultar después de 10 segundos
+            passwordAutoHideTimer = new PauseTransition(Duration.seconds(PASSWORD_AUTO_HIDE_SECONDS));
+            passwordAutoHideTimer.setOnFinished(event -> {
+                passwordVisible = false;
+                passwordLabel.setText("••••••••••••");
+                togglePasswordBtn.setText("👁");
+                System.out.println("Contraseña ocultada automáticamente por seguridad");
+            });
+            passwordAutoHideTimer.play();
         } else {
             passwordLabel.setText("••••••••••••");
             togglePasswordBtn.setText("👁");
@@ -208,6 +243,13 @@ public class PasswordDetailController implements Initializable {
     private void handleCopyPassword() {
         if (entry.getPassword() != null) {
             clipboardUtil.copyToClipboardWithAutoClear(entry.getPassword());
+
+            // Mostrar notificación estilo Bitwarden/1Password
+            int clearDelaySeconds = clipboardUtil.getClearDelaySeconds();
+            toastUtil.showSuccess(
+                dialogStage.getOwner(),
+                "📋 Contraseña copiada (se borrará en " + clearDelaySeconds + "s)"
+            );
         }
     }
 

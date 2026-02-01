@@ -101,6 +101,21 @@
     -fx-background-color: #f1f5f9;
 }
 
+.button-add-entry {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: white;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+}
+
+.button-add-entry:hover {
+    -fx-background-color: #1d4ed8;
+    -fx-scale-y: 1.05;
+    -fx-scale-x: 1.05;
+}
+
 /* Sidebar */
 .sidebar {
     -fx-background-color: #1e293b;
@@ -211,10 +226,10 @@
 
 /* Botones de acciones en tabla */
 .table-action-btn {
-    -fx-font-size: 11px;
+    -fx-font-size: 12px;
     -fx-font-weight: bold;
-    -fx-padding: 5 8;
-    -fx-background-radius: 4;
+    -fx-padding: 6 10;
+    -fx-background-radius: 5;
     -fx-cursor: hand;
     -fx-background-color: #f1f5f9;
     -fx-text-fill: #475569;
@@ -674,4 +689,47 @@
 
 .context-menu .menu-item .label {
     -fx-font-size: 13px;
+}
+
+/* Vault Status Indicator */
+.vault-status-container {
+    -fx-background-color: #f0fdf4;
+    -fx-border-color: #86efac;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 8 12;
+    -fx-effect: dropshadow(gaussian, rgba(34,197,94,0.15), 4, 0, 0, 1);
+}
+
+.vault-status-label {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #16a34a;
+}
+
+.auto-lock-timer {
+    -fx-font-size: 12px;
+    -fx-text-fill: #15803d;
+    -fx-padding: 0 5;
+}
+
+.manual-lock-btn {
+    -fx-background-color: #22c55e;
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 6 12;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.manual-lock-btn:hover {
+    -fx-background-color: #16a34a;
+    -fx-scale-y: 1.05;
+    -fx-scale-x: 1.05;
+}
+
+.manual-lock-btn:pressed {
+    -fx-background-color: #15803d;
 }

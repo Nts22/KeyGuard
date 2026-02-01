@@ -48,6 +48,9 @@ public class MainController implements Initializable {
     @FXML private VBox sidebar;
     @FXML private Button toggleSidebarBtn;
     @FXML private Pagination pagination;
+    @FXML private Label vaultStatusLabel;
+    @FXML private Label autoLockTimerLabel;
+    @FXML private Button manualLockBtn;
 
     private boolean sidebarVisible = true;
     private static final int ITEMS_PER_PAGE = 20;
@@ -66,6 +69,7 @@ public class MainController implements Initializable {
     private Long selectedCategoryId = null;
     private boolean isLocked = false;
     private Stage primaryStage; // Almacenar referencia al stage principal
+    private javafx.animation.Timeline lockTimerUpdater; // Timeline para actualizar contador visual
 
     public MainController(PasswordEntryService passwordEntryService,
                           CategoryService categoryService,
@@ -786,6 +790,71 @@ public class MainController implements Initializable {
     }
 
     /**
+     * Maneja el bloqueo manual de la bóveda cuando el usuario hace clic en el botón.
+     */
+    @FXML
+    private void handleManualLock() {
+        System.out.println("Bloqueo manual activado por el usuario");
+        lockService.lockNow();
+    }
+
+    /**
+     * Inicia el Timeline que actualiza el contador visual de auto-lock cada segundo.
+     */
+    private void startLockTimerUpdater() {
+        // Detener Timeline anterior si existe
+        if (lockTimerUpdater != null) {
+            lockTimerUpdater.stop();
+        }
+
+        // Crear nuevo Timeline que se ejecuta cada segundo
+        lockTimerUpdater = new javafx.animation.Timeline(
+            new javafx.animation.KeyFrame(
+                javafx.util.Duration.seconds(1),
+                event -> updateLockTimerDisplay()
+            )
+        );
+        lockTimerUpdater.setCycleCount(javafx.animation.Timeline.INDEFINITE);
+        lockTimerUpdater.play();
+
+        // Actualizar inmediatamente
+        updateLockTimerDisplay();
+    }
+
+    /**
+     * Actualiza el label del contador de auto-lock con el tiempo restante.
+     */
+    private void updateLockTimerDisplay() {
+        if (lockService == null || autoLockTimerLabel == null) {
+            return;
+        }
+
+        try {
+            // Calcular tiempo restante basado en el timeout configurado
+            int timeoutMinutes = lockService.getInactivityTimeout();
+
+            // Mostrar el tiempo configurado en formato corto
+            if (timeoutMinutes == 1) {
+                autoLockTimerLabel.setText("⏱️ 1 min");
+            } else {
+                autoLockTimerLabel.setText("⏱️ " + timeoutMinutes + " min");
+            }
+        } catch (Exception e) {
+            autoLockTimerLabel.setText("⏱️ Activo");
+        }
+    }
+
+    /**
+     * Detiene el Timeline del contador visual.
+     */
+    private void stopLockTimerUpdater() {
+        if (lockTimerUpdater != null) {
+            lockTimerUpdater.stop();
+            lockTimerUpdater = null;
+        }
+    }
+
+    /**
      * Configura el monitoreo de bloqueo automático.
      * Se activa por minimización de ventana o inactividad (2 min).
      */
@@ -817,6 +886,9 @@ public class MainController implements Initializable {
                 passwordTable.getScene().setOnKeyPressed(event -> lockService.resetTimer());
                 passwordTable.getScene().setOnKeyReleased(event -> lockService.resetTimer());
                 passwordTable.getScene().setOnScroll(event -> lockService.resetTimer());
+
+                // Iniciar actualización visual del contador
+                startLockTimerUpdater();
             }
         });
     }
@@ -836,6 +908,9 @@ public class MainController implements Initializable {
             try {
                 // Detener monitoreo mientras está bloqueada
                 lockService.stopMonitoring();
+
+                // Detener actualización visual del contador
+                stopLockTimerUpdater();
 
                 // Almacenar referencia al stage ANTES de cambiar la escena
                 primaryStage = (Stage) passwordTable.getScene().getWindow();
