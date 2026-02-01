@@ -51,6 +51,22 @@
 
                 <Separator style="-fx-background-color: #334155;"/>
 
+                <Button text="🔍 Verificar Contraseñas" styleClass="category-item"
+                        onAction="#handleCheckBreaches" maxWidth="Infinity"
+                        style="-fx-text-fill: #fbbf24;"/>
+
+                <Separator style="-fx-background-color: #334155;"/>
+
+                <Button text="💾 Exportar Contraseñas" styleClass="category-item"
+                        onAction="#handleExport" maxWidth="Infinity"
+                        style="-fx-text-fill: #3b82f6;"/>
+
+                <Button text="📥 Importar Contraseñas" styleClass="category-item"
+                        onAction="#handleImport" maxWidth="Infinity"
+                        style="-fx-text-fill: #8b5cf6;"/>
+
+                <Separator style="-fx-background-color: #334155;"/>
+
                 <Button text="Cerrar Sesión" styleClass="category-item"
                         onAction="#handleLogout" maxWidth="Infinity"
                         style="-fx-text-fill: #f87171;"/>
@@ -80,7 +96,23 @@
 
                 <Region HBox.hgrow="ALWAYS"/>
 
-                <Button text="+ Nueva Entrada" onAction="#handleNewEntry"/>
+                <!-- Indicador de estado de bóveda -->
+                <HBox spacing="8" alignment="CENTER" styleClass="vault-status-container">
+                    <Label fx:id="vaultStatusLabel" text="🟢 Desbloqueada"
+                           styleClass="vault-status-label"/>
+                    <Separator orientation="VERTICAL" prefHeight="20" style="-fx-background-color: #86efac;"/>
+                    <Label fx:id="autoLockTimerLabel" text="⏱️ 2 min"
+                           styleClass="auto-lock-timer"/>
+                    <Button fx:id="manualLockBtn" text="🔒"
+                            styleClass="manual-lock-btn"
+                            onAction="#handleManualLock"/>
+                </HBox>
+
+                <Separator orientation="VERTICAL" prefHeight="30"/>
+
+                <Button text="+" onAction="#handleNewEntry"
+                        styleClass="button-add-entry"
+                        prefWidth="45" prefHeight="38"/>
             </HBox>
 
             <!-- Tabla de contraseñas - altura fija para 20 filas -->
