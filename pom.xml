@@ -20,9 +20,8 @@
 
     <properties>
         <java.version>17</java.version>
-        <javafx.version>17.0.10</javafx.version> 
-        <sqlite.version>3.45.1.0</sqlite.version> 
-        <logback.version>1.4.14</logback.version>
+        <javafx.version>17.0.10</javafx.version>
+        <sqlite.version>3.45.1.0</sqlite.version>
         <app.name>KeyGuard</app.name>
         <app.vendor>KeyGuard</app.vendor>
         <app.copyright>Copyright 2026</app.copyright>
