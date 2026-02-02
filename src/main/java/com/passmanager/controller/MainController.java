@@ -2,9 +2,11 @@ package com.passmanager.controller;
 
 import com.passmanager.model.dto.CategoryDTO;
 import com.passmanager.model.dto.PasswordEntryDTO;
+import com.passmanager.model.dto.PasswordHistoryDTO;
 import com.passmanager.service.AuthService;
 import com.passmanager.service.CategoryService;
 import com.passmanager.service.PasswordEntryService;
+import com.passmanager.service.PasswordHistoryService;
 import com.passmanager.util.ClipboardUtil;
 import com.passmanager.util.DialogUtil;
 import com.passmanager.util.FxmlLoaderUtil;
@@ -35,6 +37,7 @@ import java.util.ResourceBundle;
 public class MainController implements Initializable {
 
     @FXML private TextField searchField;
+    @FXML private Label searchResultsLabel;
     @FXML private TableView<PasswordEntryDTO> passwordTable;
     @FXML private TableColumn<PasswordEntryDTO, String> titleColumn;
     @FXML private TableColumn<PasswordEntryDTO, String> usernameColumn;
@@ -61,6 +64,7 @@ public class MainController implements Initializable {
     private final ClipboardUtil clipboardUtil;
     private final DialogUtil dialogUtil;
     private final FxmlLoaderUtil fxmlLoaderUtil;
+    private final PasswordHistoryService passwordHistoryService;
     private final com.passmanager.service.InactivityService inactivityService;
     private final com.passmanager.service.LockService lockService;
 
@@ -77,6 +81,7 @@ public class MainController implements Initializable {
                           ClipboardUtil clipboardUtil,
                           DialogUtil dialogUtil,
                           FxmlLoaderUtil fxmlLoaderUtil,
+                          PasswordHistoryService passwordHistoryService,
                           com.passmanager.service.InactivityService inactivityService,
                           com.passmanager.service.LockService lockService) {
         this.passwordEntryService = passwordEntryService;
@@ -85,6 +90,7 @@ public class MainController implements Initializable {
         this.clipboardUtil = clipboardUtil;
         this.dialogUtil = dialogUtil;
         this.fxmlLoaderUtil = fxmlLoaderUtil;
+        this.passwordHistoryService = passwordHistoryService;
         this.inactivityService = inactivityService;
         this.lockService = lockService;
     }
@@ -209,8 +215,12 @@ public class MainController implements Initializable {
             categoryRow.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
             categoryRow.getStyleClass().add("category-row");
 
-            Button categoryBtn = new Button(category.getName() + " (" + category.getEntryCount() + ")");
-            categoryBtn.getStyleClass().add("category-item");
+            // Agregar icono a la categoría
+            String icon = getCategoryIcon(category.getName());
+            String buttonText = icon + " " + category.getName() + " (" + category.getEntryCount() + ")";
+
+            Button categoryBtn = new Button(buttonText);
+            categoryBtn.getStyleClass().addAll("category-item", "category-item-with-icon");
             categoryBtn.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(categoryBtn, javafx.scene.layout.Priority.ALWAYS);
             categoryBtn.setOnAction(e -> selectCategory(category.getId(), categoryBtn));
@@ -236,6 +246,84 @@ public class MainController implements Initializable {
             categoryRow.getChildren().addAll(categoryBtn, deleteBtn);
             categoriesContainer.getChildren().add(categoryRow);
         }
+    }
+
+    /**
+     * Obtiene un icono apropiado basado en el nombre de la categoría
+     */
+    private String getCategoryIcon(String categoryName) {
+        if (categoryName == null) {
+            return "📁";
+        }
+
+        String lowerName = categoryName.toLowerCase();
+
+        // Bancos y finanzas
+        if (lowerName.contains("banco") || lowerName.contains("bank") ||
+            lowerName.contains("tarjeta") || lowerName.contains("card") ||
+            lowerName.contains("finanz") || lowerName.contains("financ")) {
+            return "🏦";
+        }
+
+        // Email
+        if (lowerName.contains("email") || lowerName.contains("correo") ||
+            lowerName.contains("mail")) {
+            return "📧";
+        }
+
+        // Social media
+        if (lowerName.contains("social") || lowerName.contains("facebook") ||
+            lowerName.contains("twitter") || lowerName.contains("instagram") ||
+            lowerName.contains("linkedin") || lowerName.contains("tiktok")) {
+            return "📱";
+        }
+
+        // Trabajo
+        if (lowerName.contains("trabajo") || lowerName.contains("work") ||
+            lowerName.contains("office") || lowerName.contains("empresa")) {
+            return "💼";
+        }
+
+        // Compras
+        if (lowerName.contains("compra") || lowerName.contains("shopping") ||
+            lowerName.contains("tienda") || lowerName.contains("store") ||
+            lowerName.contains("amazon") || lowerName.contains("mercado")) {
+            return "🛒";
+        }
+
+        // Entretenimiento
+        if (lowerName.contains("entretenimiento") || lowerName.contains("entertainment") ||
+            lowerName.contains("netflix") || lowerName.contains("spotify") ||
+            lowerName.contains("gaming") || lowerName.contains("juego")) {
+            return "🎮";
+        }
+
+        // Viajes
+        if (lowerName.contains("viaje") || lowerName.contains("travel") ||
+            lowerName.contains("hotel") || lowerName.contains("vuelo")) {
+            return "✈️";
+        }
+
+        // Educación
+        if (lowerName.contains("educaci") || lowerName.contains("education") ||
+            lowerName.contains("escuela") || lowerName.contains("school") ||
+            lowerName.contains("universidad") || lowerName.contains("university")) {
+            return "🎓";
+        }
+
+        // Salud
+        if (lowerName.contains("salud") || lowerName.contains("health") ||
+            lowerName.contains("medic") || lowerName.contains("hospital")) {
+            return "🏥";
+        }
+
+        // Personal
+        if (lowerName.contains("personal")) {
+            return "👤";
+        }
+
+        // Default
+        return "📁";
     }
 
     private void handleEditCategory(CategoryDTO category) {
@@ -314,18 +402,22 @@ public class MainController implements Initializable {
     private void loadPasswords() {
         List<PasswordEntryDTO> entries;
         String search = searchField.getText();
+        boolean isSearching = search != null && !search.isEmpty();
 
         if (selectedCategoryId == null) {
-            entries = (search == null || search.isEmpty())
-                    ? passwordEntryService.findAll()
-                    : passwordEntryService.search(search);
+            entries = isSearching
+                    ? passwordEntryService.search(search)
+                    : passwordEntryService.findAll();
         } else {
-            entries = (search == null || search.isEmpty())
-                    ? passwordEntryService.findByCategory(selectedCategoryId)
-                    : passwordEntryService.searchByCategory(selectedCategoryId, search);
+            entries = isSearching
+                    ? passwordEntryService.searchByCategory(selectedCategoryId, search)
+                    : passwordEntryService.findByCategory(selectedCategoryId);
         }
 
         allPasswords = entries;
+
+        // Actualizar indicador de resultados de búsqueda
+        updateSearchResultsLabel(isSearching, entries.size());
 
         int pageCount = (int) Math.ceil((double) allPasswords.size() / ITEMS_PER_PAGE);
         pagination.setPageCount(Math.max(1, pageCount));
@@ -338,6 +430,28 @@ public class MainController implements Initializable {
         } else {
             // Si estamos en otra página, ir a página 0 (esto dispara el callback automáticamente)
             pagination.setCurrentPageIndex(0);
+        }
+    }
+
+    /**
+     * Actualiza el label que muestra los resultados de búsqueda.
+     */
+    private void updateSearchResultsLabel(boolean isSearching, int resultsCount) {
+        if (!isSearching) {
+            searchResultsLabel.setVisible(false);
+            return;
+        }
+
+        searchResultsLabel.setVisible(true);
+        if (resultsCount == 0) {
+            searchResultsLabel.setText("0 resultados encontrados");
+            searchResultsLabel.setStyle("-fx-text-fill: #ef4444;");
+        } else if (resultsCount == 1) {
+            searchResultsLabel.setText("1 resultado encontrado");
+            searchResultsLabel.setStyle("-fx-text-fill: #22c55e;");
+        } else {
+            searchResultsLabel.setText(resultsCount + " resultados encontrados");
+            searchResultsLabel.setStyle("-fx-text-fill: #22c55e;");
         }
     }
 

@@ -34,50 +34,57 @@
 
                 <Separator style="-fx-background-color: #334155;"/>
 
-                <Label text="Categorías" styleClass="sidebar-title"/>
+                <Label text="📁 Categorías" styleClass="sidebar-section-title"/>
 
-                <Button fx:id="allCategoriesBtn" text="Todas"
-                        styleClass="category-item, category-item-selected"
-                        onAction="#handleAllCategories" maxWidth="Infinity"/>
+                <VBox styleClass="categories-group" spacing="0">
+                    <Button fx:id="allCategoriesBtn" text="Todas"
+                            styleClass="category-item, category-item-selected"
+                            onAction="#handleAllCategories" maxWidth="Infinity"/>
 
-                <VBox fx:id="categoriesContainer" spacing="0">
-                    <!-- Las categorías se cargan dinámicamente -->
+                    <VBox fx:id="categoriesContainer" spacing="0">
+                        <!-- Las categorías se cargan dinámicamente -->
+                    </VBox>
+
+                    <Separator style="-fx-background-color: rgba(148, 163, 184, 0.15); -fx-padding: 4 0;"/>
+
+                    <Button text="+ Nueva Categoría" styleClass="category-item"
+                            onAction="#handleNewCategory" maxWidth="Infinity"/>
                 </VBox>
 
                 <Region VBox.vgrow="ALWAYS"/>
 
-                <Button text="+ Nueva Categoría" styleClass="category-item"
-                        onAction="#handleNewCategory" maxWidth="Infinity"/>
+                <Separator style="-fx-background-color: #334155; -fx-padding: 8 0;"/>
 
-                <Separator style="-fx-background-color: #334155;"/>
+                <!-- Sección de Seguridad agrupada -->
+                <Label text="🔐 Seguridad" styleClass="sidebar-section-title"/>
 
-                <Button text="🔍 Verificar Contraseñas" styleClass="category-item"
-                        onAction="#handleCheckBreaches" maxWidth="Infinity"
-                        style="-fx-text-fill: #fbbf24;"/>
+                <VBox styleClass="security-actions-group" spacing="0">
+                    <Button text="🔍 Verificar Contraseñas" styleClass="security-action-item"
+                            onAction="#handleCheckBreaches" maxWidth="Infinity"/>
 
-                <Separator style="-fx-background-color: #334155;"/>
+                    <Button text="💾 Exportar Contraseñas" styleClass="security-action-item"
+                            onAction="#handleExport" maxWidth="Infinity"/>
 
-                <Button text="💾 Exportar Contraseñas" styleClass="category-item"
-                        onAction="#handleExport" maxWidth="Infinity"
-                        style="-fx-text-fill: #3b82f6;"/>
+                    <Button text="📥 Importar Contraseñas" styleClass="security-action-item"
+                            onAction="#handleImport" maxWidth="Infinity"/>
+                </VBox>
 
-                <Button text="📥 Importar Contraseñas" styleClass="category-item"
-                        onAction="#handleImport" maxWidth="Infinity"
-                        style="-fx-text-fill: #8b5cf6;"/>
+                <Separator style="-fx-background-color: #334155; -fx-padding: 8 0;"/>
 
-                <Separator style="-fx-background-color: #334155;"/>
+                <!-- Sección de Cuenta (zona de peligro) -->
+                <Label text="⚙️ Cuenta" styleClass="sidebar-section-title"/>
 
-                <Button text="Cerrar Sesión" styleClass="category-item"
-                        onAction="#handleLogout" maxWidth="Infinity"
-                        style="-fx-text-fill: #f87171;"/>
+                <VBox styleClass="danger-zone" spacing="0">
+                    <Button text="🚪 Cerrar Sesión" styleClass="danger-action-item"
+                            onAction="#handleLogout" maxWidth="Infinity"/>
 
-                <Button text="Salir" styleClass="category-item"
-                        onAction="#handleExit" maxWidth="Infinity"
-                        style="-fx-text-fill: #94a3b8;">
-                    <VBox.margin>
-                        <Insets bottom="20"/>
-                    </VBox.margin>
-                </Button>
+                    <Button text="❌ Salir" styleClass="danger-action-item"
+                            onAction="#handleExit" maxWidth="Infinity"/>
+                </VBox>
+
+                <VBox.margin>
+                    <Insets bottom="20"/>
+                </VBox.margin>
             </VBox>
         </HBox>
     </left>
@@ -91,8 +98,11 @@
 
             <!-- Barra superior -->
             <HBox spacing="15" alignment="CENTER_LEFT">
-                <TextField fx:id="searchField" promptText="Buscar contraseñas..."
-                           styleClass="search-field" onKeyReleased="#handleSearch"/>
+                <VBox spacing="2">
+                    <TextField fx:id="searchField" promptText="Buscar por título, usuario o email..."
+                               styleClass="search-field" onKeyReleased="#handleSearch"/>
+                    <Label fx:id="searchResultsLabel" styleClass="search-results-label" visible="false"/>
+                </VBox>
 
                 <Region HBox.hgrow="ALWAYS"/>
 
@@ -112,11 +122,15 @@
 
                 <Button text="+" onAction="#handleNewEntry"
                         styleClass="button-add-entry"
-                        prefWidth="45" prefHeight="38"/>
+                        prefWidth="45" prefHeight="38">
+                    <tooltip>
+                        <Tooltip text="Nueva contraseña (Ctrl+N)"/>
+                    </tooltip>
+                </Button>
             </HBox>
 
             <!-- Tabla de contraseñas - altura fija para 20 filas -->
-            <TableView fx:id="passwordTable" prefHeight="720" minHeight="720" maxHeight="720" fixedCellSize="33">
+            <TableView fx:id="passwordTable" prefHeight="720" minHeight="720" maxHeight="720" fixedCellSize="30">
                 <columns>
                     <TableColumn fx:id="titleColumn" text="Título"/>
                     <TableColumn fx:id="usernameColumn" text="Usuario"/>
