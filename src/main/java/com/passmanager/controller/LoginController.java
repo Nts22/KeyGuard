@@ -4,6 +4,7 @@ import com.passmanager.config.AppConfig;
 import com.passmanager.model.dto.UserDTO;
 import com.passmanager.service.AuthService;
 import com.passmanager.service.CategoryService;
+import com.passmanager.service.ThemeService;
 import com.passmanager.util.FxmlLoaderUtil;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
@@ -44,15 +45,17 @@ public class LoginController implements Initializable {
     private final AuthService authService;
     private final CategoryService categoryService;
     private final FxmlLoaderUtil fxmlLoaderUtil;
+    private final ThemeService themeService;
 
     private boolean isRegisterMode;
     private boolean hasUsers;
 
     public LoginController(AuthService authService, CategoryService categoryService,
-                           FxmlLoaderUtil fxmlLoaderUtil) {
+                           FxmlLoaderUtil fxmlLoaderUtil, ThemeService themeService) {
         this.authService = authService;
         this.categoryService = categoryService;
         this.fxmlLoaderUtil = fxmlLoaderUtil;
+        this.themeService = themeService;
     }
 
     @Override
@@ -281,7 +284,7 @@ public class LoginController implements Initializable {
         try {
             Parent mainView = fxmlLoaderUtil.loadFxml("/fxml/main.fxml");
             Scene scene = new Scene(mainView);
-            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            themeService.applyToScene(scene);
 
             Stage stage = (Stage) passwordField.getScene().getWindow();
             stage.setScene(scene);
@@ -305,7 +308,7 @@ public class LoginController implements Initializable {
             controller.setRecoveryKey(recoveryKey);
 
             Scene scene = new Scene(recoveryView);
-            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            themeService.applyToScene(scene);
 
             Stage stage = (Stage) passwordField.getScene().getWindow();
             stage.setScene(scene);
@@ -323,7 +326,7 @@ public class LoginController implements Initializable {
         try {
             Parent recoveryView = fxmlLoaderUtil.loadFxml("/fxml/password-recovery.fxml");
             Scene scene = new Scene(recoveryView);
-            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            themeService.applyToScene(scene);
 
             Stage stage = (Stage) passwordField.getScene().getWindow();
             stage.setScene(scene);

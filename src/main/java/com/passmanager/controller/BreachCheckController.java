@@ -3,6 +3,8 @@ package com.passmanager.controller;
 import com.passmanager.model.dto.PasswordEntryDTO;
 import com.passmanager.service.PasswordBreachService;
 import com.passmanager.service.PasswordEntryService;
+import com.passmanager.util.PasswordGeneratorUtil;
+import com.passmanager.util.PasswordGeneratorUtil.PasswordStrength;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -11,430 +13,423 @@ import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import org.springframework.stereotype.Component;
 
 import java.net.URL;
-import java.util.List;
-import java.util.ResourceBundle;
+import java.util.*;
+import java.util.stream.Collectors;
 
-/**
- * Controlador para la verificación masiva de contraseñas comprometidas.
- *
- * <h2>¿Por qué verificación masiva?</h2>
- * - Permite al usuario auditar todas sus contraseñas de una vez
- * - Identifica contraseñas vulnerables que ya están guardadas
- * - Proporciona un reporte completo del estado de seguridad
- *
- * <h2>Desafíos de Implementación</h2>
- *
- * <h3>1. Performance</h3>
- * - No podemos verificar 100 contraseñas de forma síncrona (bloquearía la UI)
- * - Usamos JavaFX Task para procesamiento en background
- * - Actualizamos la UI progresivamente con Platform.runLater()
- *
- * <h3>2. Rate Limiting</h3>
- * - HIBP API permite requests ilimitados pero razonables
- * - Agregamos un pequeño delay entre requests (100ms) para ser respetuosos
- * - Si hacemos spam, podríamos ser bloqueados temporalmente
- *
- * <h3>3. Manejo de Errores</h3>
- * - Una contraseña que falla no debe detener toda la verificación
- * - Marcamos errores individuales y continuamos
- * - Al final mostramos cuántas fallaron y por qué
- *
- * <h3>4. UX</h3>
- * - Mostrar progreso en tiempo real (barra + texto)
- * - Permitir cancelar la operación
- * - Mostrar resultados parciales mientras se procesa
- *
- * @author KeyGuard Team
- */
 @Component
 @org.springframework.context.annotation.Scope("prototype")
 public class BreachCheckController implements Initializable {
 
+    // ── Resumen ──────────────────────────────────────
+    @FXML private Label totalLabel;
+    @FXML private Label breachedLabel;
+    @FXML private Label duplicatesLabel;
+    @FXML private Label weakLabel;
+
+    // ── Progreso ─────────────────────────────────────
     @FXML private VBox progressContainer;
     @FXML private ProgressBar progressBar;
     @FXML private Label progressLabel;
 
-    @FXML private HBox summaryContainer;
-    @FXML private Label totalLabel;
-    @FXML private Label safeLabel;
-    @FXML private Label breachedLabel;
+    // ── Tabla: Brechas ───────────────────────────────
+    @FXML private TableView<BreachResult> breachTable;
+    @FXML private TableColumn<BreachResult, String> breachStatusColumn;
+    @FXML private TableColumn<BreachResult, String> breachTitleColumn;
+    @FXML private TableColumn<BreachResult, String> breachUsernameColumn;
+    @FXML private TableColumn<BreachResult, String> breachSeverityColumn;
+    @FXML private TableColumn<BreachResult, String> breachOccurrencesColumn;
+    @FXML private TableColumn<BreachResult, String> breachRecommendationColumn;
 
-    @FXML private TableView<BreachCheckResult> resultsTable;
-    @FXML private TableColumn<BreachCheckResult, String> statusColumn;
-    @FXML private TableColumn<BreachCheckResult, String> titleColumn;
-    @FXML private TableColumn<BreachCheckResult, String> usernameColumn;
-    @FXML private TableColumn<BreachCheckResult, String> severityColumn;
-    @FXML private TableColumn<BreachCheckResult, String> occurrencesColumn;
-    @FXML private TableColumn<BreachCheckResult, String> recommendationColumn;
+    // ── Tabla: Duplicadas ────────────────────────────
+    @FXML private TableView<DuplicateResult> duplicatesTable;
+    @FXML private TableColumn<DuplicateResult, String> dupTitleColumn;
+    @FXML private TableColumn<DuplicateResult, String> dupUsernameColumn;
+    @FXML private TableColumn<DuplicateResult, String> dupEmailColumn;
+    @FXML private TableColumn<DuplicateResult, String> dupGroupColumn;
 
-    @FXML private VBox infoContainer;
-    @FXML private Button exportButton;
+    // ── Tabla: Débiles ───────────────────────────────
+    @FXML private TableView<WeakResult> weakTable;
+    @FXML private TableColumn<WeakResult, String> weakTitleColumn;
+    @FXML private TableColumn<WeakResult, String> weakUsernameColumn;
+    @FXML private TableColumn<WeakResult, String> weakStrengthColumn;
+    @FXML private TableColumn<WeakResult, String> weakLengthColumn;
 
+    // ── Servicios ────────────────────────────────────
     private final PasswordEntryService passwordEntryService;
     private final PasswordBreachService passwordBreachService;
+    private final PasswordGeneratorUtil passwordGeneratorUtil;
 
+    // ── Estado ───────────────────────────────────────
     private Stage dialogStage;
-    private Task<Void> verificationTask;
-    private final ObservableList<BreachCheckResult> results = FXCollections.observableArrayList();
+    private Task<Void> breachTask;
+
+    private final ObservableList<BreachResult> breachResults = FXCollections.observableArrayList();
+    private final ObservableList<DuplicateResult> duplicateResults = FXCollections.observableArrayList();
+    private final ObservableList<WeakResult> weakResults = FXCollections.observableArrayList();
 
     public BreachCheckController(PasswordEntryService passwordEntryService,
-                                  PasswordBreachService passwordBreachService) {
+                                 PasswordBreachService passwordBreachService,
+                                 PasswordGeneratorUtil passwordGeneratorUtil) {
         this.passwordEntryService = passwordEntryService;
         this.passwordBreachService = passwordBreachService;
+        this.passwordGeneratorUtil = passwordGeneratorUtil;
     }
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        setupTable();
+        breachTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        duplicatesTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        weakTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        setupBreachTable();
+        setupDuplicatesTable();
+        setupWeakTable();
     }
 
-    /**
-     * Configura las columnas de la tabla de resultados.
-     *
-     * ¿Por qué usar PropertyValueFactory?
-     * - NO lo usamos porque queremos control total sobre el formato
-     * - Usamos setCellValueFactory con lambdas para personalizar cada columna
-     * - Esto permite formatear números, colores, emojis, etc.
-     */
-    private void setupTable() {
-        // Columna de estado con emoji
-        statusColumn.setCellValueFactory(data -> {
-            BreachCheckResult result = data.getValue();
-            String emoji = result.isBreached() ? "⚠️" : "✅";
-            return new SimpleStringProperty(emoji);
-        });
-        statusColumn.setStyle("-fx-alignment: CENTER; -fx-font-size: 18px;");
+    // ═══════════════════════════════════════════════════
+    //  SETUP DE TABLAS
+    // ═══════════════════════════════════════════════════
 
-        // Título de la contraseña
-        titleColumn.setCellValueFactory(data ->
+    private void setupBreachTable() {
+        breachStatusColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(data.getValue().isBreached() ? "⚠️" : "✅"));
+        breachStatusColumn.setStyle("-fx-alignment: CENTER;");
+
+        breachTitleColumn.setCellValueFactory(data ->
                 new SimpleStringProperty(data.getValue().getEntry().getTitle()));
 
-        // Usuario
-        usernameColumn.setCellValueFactory(data -> {
-            String username = data.getValue().getEntry().getUsername();
-            return new SimpleStringProperty(username != null && !username.isEmpty() ? username : "-");
+        breachUsernameColumn.setCellValueFactory(data -> {
+            String u = data.getValue().getEntry().getUsername();
+            return new SimpleStringProperty(u != null && !u.isEmpty() ? u : "—");
         });
 
-        // Severidad con colores
-        severityColumn.setCellValueFactory(data -> {
-            BreachCheckResult result = data.getValue();
-            if (result.getError() != null) {
-                return new SimpleStringProperty("Error");
-            }
-            return new SimpleStringProperty(result.getSeverityLevel().getLabel());
+        breachSeverityColumn.setCellValueFactory(data -> {
+            BreachResult r = data.getValue();
+            return new SimpleStringProperty(r.getError() != null ? "Error" : r.getSeverity().getLabel());
         });
 
-        // Customizar las celdas de severidad con colores
-        severityColumn.setCellFactory(column -> new TableCell<>() {
+        // Celda de severidad con color según nivel
+        breachSeverityColumn.setCellFactory(column -> new TableCell<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setStyle("");
-                } else {
-                    setText(item);
-                    // Aplicar colores según severidad
-                    if (item.equals("Segura")) {
-                        setStyle("-fx-text-fill: #22c55e; -fx-font-weight: bold;");
-                    } else if (item.equals("Riesgo Bajo")) {
-                        setStyle("-fx-text-fill: #eab308; -fx-font-weight: bold;");
-                    } else if (item.equals("Riesgo Medio")) {
-                        setStyle("-fx-text-fill: #f97316; -fx-font-weight: bold;");
-                    } else if (item.equals("Riesgo Alto")) {
-                        setStyle("-fx-text-fill: #dc2626; -fx-font-weight: bold;");
-                    } else if (item.equals("Riesgo Crítico")) {
-                        setStyle("-fx-text-fill: #991b1b; -fx-font-weight: bold;");
-                    } else if (item.equals("Error")) {
-                        setStyle("-fx-text-fill: #6b7280; -fx-font-style: italic;");
-                    }
+                if (empty || item == null) { setText(null); setStyle(""); return; }
+                setText(item);
+                switch (item) {
+                    case "Segura"         -> setStyle("-fx-text-fill: #22c55e; -fx-font-weight: bold;");
+                    case "Riesgo Bajo"    -> setStyle("-fx-text-fill: #eab308; -fx-font-weight: bold;");
+                    case "Riesgo Medio"   -> setStyle("-fx-text-fill: #f97316; -fx-font-weight: bold;");
+                    case "Riesgo Alto"    -> setStyle("-fx-text-fill: #dc2626; -fx-font-weight: bold;");
+                    case "Riesgo Crítico" -> setStyle("-fx-text-fill: #991b1b; -fx-font-weight: bold;");
+                    default               -> setStyle("-fx-text-fill: #6b7280; -fx-font-style: italic;");
                 }
             }
         });
 
-        // Número de apariciones
-        occurrencesColumn.setCellValueFactory(data -> {
-            BreachCheckResult result = data.getValue();
-            if (result.getError() != null) {
-                return new SimpleStringProperty("-");
-            }
-            if (!result.isBreached()) {
-                return new SimpleStringProperty("0");
-            }
-            // Formatear con separador de miles para números grandes
-            return new SimpleStringProperty(String.format("%,d", result.getOccurrences()));
+        breachOccurrencesColumn.setCellValueFactory(data -> {
+            BreachResult r = data.getValue();
+            if (r.getError() != null)  return new SimpleStringProperty("—");
+            if (!r.isBreached())       return new SimpleStringProperty("0");
+            return new SimpleStringProperty(String.format("%,d", r.getOccurrences()));
         });
-        occurrencesColumn.setStyle("-fx-alignment: CENTER-RIGHT;");
+        breachOccurrencesColumn.setStyle("-fx-alignment: CENTER-RIGHT;");
 
-        // Recomendación
-        recommendationColumn.setCellValueFactory(data -> {
-            BreachCheckResult result = data.getValue();
-            if (result.getError() != null) {
-                return new SimpleStringProperty("No se pudo verificar");
-            }
-            if (!result.isBreached()) {
-                return new SimpleStringProperty("Mantener contraseña");
-            }
-
-            // Recomendación basada en severidad
-            PasswordBreachService.SeverityLevel severity = result.getSeverityLevel();
-            switch (severity) {
-                case CRITICAL:
-                    return new SimpleStringProperty("⛔ CAMBIAR INMEDIATAMENTE");
-                case HIGH:
-                    return new SimpleStringProperty("⚠️ Cambiar urgentemente");
-                case MEDIUM:
-                    return new SimpleStringProperty("⚠️ Cambiar pronto");
-                case LOW:
-                    return new SimpleStringProperty("ℹ️ Considerar cambio");
-                default:
-                    return new SimpleStringProperty("Revisar");
-            }
+        breachRecommendationColumn.setCellValueFactory(data -> {
+            BreachResult r = data.getValue();
+            if (r.getError() != null)  return new SimpleStringProperty("No se pudo verificar");
+            if (!r.isBreached())       return new SimpleStringProperty("Mantener contraseña");
+            String rec = switch (r.getSeverity()) {
+                case CRITICAL -> "⛔ CAMBIAR INMEDIATAMENTE";
+                case HIGH     -> "⚠️ Cambiar urgentemente";
+                case MEDIUM   -> "⚠️ Cambiar pronto";
+                case LOW      -> "ℹ️ Considerar cambio";
+                default       -> "Revisar";
+            };
+            return new SimpleStringProperty(rec);
         });
 
-        resultsTable.setItems(results);
+        breachTable.setItems(breachResults);
     }
+
+    private void setupDuplicatesTable() {
+        dupTitleColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(data.getValue().getEntry().getTitle()));
+
+        dupUsernameColumn.setCellValueFactory(data -> {
+            String u = data.getValue().getEntry().getUsername();
+            return new SimpleStringProperty(u != null && !u.isEmpty() ? u : "—");
+        });
+
+        dupEmailColumn.setCellValueFactory(data -> {
+            String e = data.getValue().getEntry().getEmail();
+            return new SimpleStringProperty(e != null && !e.isEmpty() ? e : "—");
+        });
+
+        dupGroupColumn.setCellValueFactory(data ->
+                new SimpleStringProperty("Grupo " + data.getValue().getGroup()));
+        dupGroupColumn.setStyle("-fx-alignment: CENTER;");
+
+        // Filas coloreadas por grupo para agrupar visualmente
+        duplicatesTable.setRowFactory(tv -> new TableRow<>() {
+            @Override
+            protected void updateItem(DuplicateResult item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setStyle(""); return; }
+                String[] colors = {
+                    "rgba(239, 68, 68, 0.1)",
+                    "rgba(249, 115, 22, 0.1)",
+                    "rgba(234, 179, 8, 0.1)",
+                    "rgba(34, 197, 94, 0.1)",
+                    "rgba(59, 130, 246, 0.1)"
+                };
+                setStyle("-fx-background-color: " + colors[(item.getGroup() - 1) % colors.length] + ";");
+            }
+        });
+
+        duplicatesTable.setItems(duplicateResults);
+    }
+
+    private void setupWeakTable() {
+        weakTitleColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(data.getValue().getEntry().getTitle()));
+
+        weakUsernameColumn.setCellValueFactory(data -> {
+            String u = data.getValue().getEntry().getUsername();
+            return new SimpleStringProperty(u != null && !u.isEmpty() ? u : "—");
+        });
+
+        weakStrengthColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(data.getValue().getStrength().getLabel()));
+
+        // Celda de fortaleza con color según nivel
+        weakStrengthColumn.setCellFactory(column -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setText(null); setStyle(""); return; }
+                setText(item);
+                if ("Muy débil".equals(item)) {
+                    setStyle("-fx-text-fill: #ef4444; -fx-font-weight: bold;");
+                } else if ("Débil".equals(item)) {
+                    setStyle("-fx-text-fill: #f97316; -fx-font-weight: bold;");
+                }
+            }
+        });
+
+        weakLengthColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(String.valueOf(data.getValue().getEntry().getPassword().length())));
+        weakLengthColumn.setStyle("-fx-alignment: CENTER;");
+
+        weakTable.setItems(weakResults);
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  ENTRY POINT & ANÁLISIS
+    // ═══════════════════════════════════════════════════
 
     public void setDialogStage(Stage dialogStage) {
         this.dialogStage = dialogStage;
-
-        // Cuando se cierre el diálogo, cancelar la tarea si está en progreso
         dialogStage.setOnCloseRequest(event -> {
-            if (verificationTask != null && verificationTask.isRunning()) {
-                verificationTask.cancel();
+            if (breachTask != null && breachTask.isRunning()) {
+                breachTask.cancel();
             }
         });
     }
 
     /**
-     * Inicia la verificación masiva de contraseñas.
-     *
-     * ¿Por qué usar un Task?
-     * - Task es la forma correcta de hacer operaciones largas en JavaFX
-     * - Corre en un thread separado (no bloquea la UI)
-     * - Proporciona progress tracking automático
-     * - Permite cancelación
-     * - Integración con Platform.runLater() para actualizar UI
+     * Punto de entrada llamado desde MainController tras abrir el diálogo.
+     * Ejecuta duplicados y débiles de forma inmediata (local),
+     * y lanza la verificación de brechas en segundo plano (API).
      */
     public void startVerification() {
-        // Obtener todas las contraseñas del usuario actual
         List<PasswordEntryDTO> allPasswords = passwordEntryService.findAll();
 
         if (allPasswords.isEmpty()) {
-            progressLabel.setText("No hay contraseñas para verificar");
+            progressContainer.setVisible(true);
+            progressLabel.setText("No hay contraseñas para analizar");
             return;
         }
 
-        // Crear la tarea de verificación
-        verificationTask = new Task<>() {
+        totalLabel.setText(String.valueOf(allPasswords.size()));
+
+        // Análisis local — inmediato
+        analyzeDuplicates(allPasswords);
+        analyzeWeakPasswords(allPasswords);
+
+        // Verificación de brechas — asíncrona (necesita API)
+        startBreachCheck(allPasswords);
+    }
+
+    private void analyzeDuplicates(List<PasswordEntryDTO> passwords) {
+        Map<String, List<PasswordEntryDTO>> groups = passwords.stream()
+                .filter(p -> p.getPassword() != null && !p.getPassword().isEmpty())
+                .collect(Collectors.groupingBy(PasswordEntryDTO::getPassword));
+
+        int groupNumber = 1;
+        for (List<PasswordEntryDTO> group : groups.values()) {
+            if (group.size() > 1) {
+                int gn = groupNumber;
+                group.forEach(entry -> duplicateResults.add(new DuplicateResult(entry, gn)));
+                groupNumber++;
+            }
+        }
+
+        // Ordenar por grupo para que aparezcan juntas visualmente
+        duplicateResults.sort(Comparator.comparingInt(DuplicateResult::getGroup));
+        duplicatesLabel.setText(String.valueOf(duplicateResults.size()));
+    }
+
+    private void analyzeWeakPasswords(List<PasswordEntryDTO> passwords) {
+        for (PasswordEntryDTO entry : passwords) {
+            if (entry.getPassword() == null || entry.getPassword().isEmpty()) continue;
+
+            PasswordStrength strength = passwordGeneratorUtil.evaluateStrength(entry.getPassword());
+            if (strength == PasswordStrength.VERY_WEAK || strength == PasswordStrength.WEAK) {
+                weakResults.add(new WeakResult(entry, strength));
+            }
+        }
+        weakLabel.setText(String.valueOf(weakResults.size()));
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  VERIFICACIÓN DE BRECHAS (asíncrona)
+    // ═══════════════════════════════════════════════════
+
+    private void startBreachCheck(List<PasswordEntryDTO> allPasswords) {
+        progressContainer.setVisible(true);
+
+        breachTask = new Task<>() {
             @Override
             protected Void call() throws Exception {
                 int total = allPasswords.size();
                 int processed = 0;
-                int safeCount = 0;
                 int breachedCount = 0;
 
                 for (PasswordEntryDTO entry : allPasswords) {
-                    // Verificar si la tarea fue cancelada
-                    if (isCancelled()) {
-                        updateMessage("Verificación cancelada");
-                        break;
-                    }
+                    if (isCancelled()) break;
 
-                    // Actualizar mensaje de progreso
                     updateMessage("Verificando: " + entry.getTitle() + " (" + (processed + 1) + "/" + total + ")");
 
                     try {
-                        // Verificar la contraseña
-                        PasswordBreachService.BreachCheckResult breachResult =
+                        PasswordBreachService.BreachCheckResult result =
                                 passwordBreachService.checkPassword(entry.getPassword());
 
-                        // Crear resultado
-                        BreachCheckResult result = new BreachCheckResult(
+                        BreachResult breachResult = new BreachResult(
                                 entry,
-                                breachResult.isBreached(),
-                                breachResult.getOccurrences(),
-                                breachResult.getSeverityLevel(),
+                                result.isBreached(),
+                                result.getOccurrences(),
+                                result.getSeverityLevel(),
                                 null
                         );
 
-                        // Agregar a la lista de resultados (en el thread de UI)
-                        Platform.runLater(() -> results.add(result));
+                        Platform.runLater(() -> breachResults.add(breachResult));
 
-                        // Actualizar contadores
-                        if (breachResult.isBreached()) {
-                            breachedCount++;
-                        } else {
-                            safeCount++;
-                        }
+                        if (result.isBreached()) breachedCount++;
 
-                        // ⏱️ DELAY ENTRE REQUESTS
-                        // ¿Por qué esperar 100ms entre requests?
-                        // - Ser respetuosos con la API de HIBP
-                        // - Evitar rate limiting
-                        // - 100ms es imperceptible para el usuario pero ayuda al servidor
-                        // - Para 50 contraseñas = 5 segundos extra (aceptable)
-                        Thread.sleep(100);
+                        Thread.sleep(100); // respetar rate-limit de HIBP
 
                     } catch (PasswordBreachService.PasswordBreachCheckException e) {
-                        // Error al verificar esta contraseña específica
-                        BreachCheckResult errorResult = new BreachCheckResult(
-                                entry,
-                                false,
-                                0,
-                                PasswordBreachService.SeverityLevel.SAFE,
-                                e.getMessage()
-                        );
-
-                        Platform.runLater(() -> results.add(errorResult));
+                        BreachResult errorResult = new BreachResult(
+                                entry, false, 0,
+                                PasswordBreachService.SeverityLevel.SAFE, e.getMessage());
+                        Platform.runLater(() -> breachResults.add(errorResult));
                     }
 
-                    // Actualizar progreso
                     processed++;
                     updateProgress(processed, total);
 
-                    // Actualizar contadores en la UI
-                    final int finalSafeCount = safeCount;
-                    final int finalBreachedCount = breachedCount;
-                    final int finalProcessed = processed;
-                    Platform.runLater(() -> {
-                        totalLabel.setText(String.valueOf(finalProcessed));
-                        safeLabel.setText(String.valueOf(finalSafeCount));
-                        breachedLabel.setText(String.valueOf(finalBreachedCount));
-                    });
+                    final int count = breachedCount;
+                    Platform.runLater(() -> breachedLabel.setText(String.valueOf(count)));
                 }
-
-                // Verificación completada
-                updateMessage("Verificación completada: " + processed + " contraseñas analizadas");
                 return null;
             }
         };
 
-        // Vincular el progreso de la tarea con la barra de progreso
-        progressBar.progressProperty().bind(verificationTask.progressProperty());
-        progressLabel.textProperty().bind(verificationTask.messageProperty());
+        progressBar.progressProperty().bind(breachTask.progressProperty());
+        progressLabel.textProperty().bind(breachTask.messageProperty());
 
-        // Cuando la tarea termine (exitosa o cancelada)
-        verificationTask.setOnSucceeded(event -> onVerificationComplete());
-        verificationTask.setOnCancelled(event -> onVerificationComplete());
-        verificationTask.setOnFailed(event -> {
-            progressLabel.setText("Error: " + verificationTask.getException().getMessage());
-            onVerificationComplete();
+        breachTask.setOnSucceeded(e -> onBreachCheckComplete());
+        breachTask.setOnCancelled(e -> onBreachCheckComplete());
+        breachTask.setOnFailed(e -> {
+            onBreachCheckComplete();
+            progressLabel.setText("Error: " + breachTask.getException().getMessage());
         });
 
-        // Iniciar la tarea en un thread separado
-        Thread thread = new Thread(verificationTask);
-        thread.setDaemon(true); // Daemon thread para que no impida cerrar la app
+        Thread thread = new Thread(breachTask);
+        thread.setDaemon(true);
         thread.start();
-
-        // Mostrar UI de progreso
-        progressContainer.setVisible(true);
-        summaryContainer.setVisible(true);
-        resultsTable.setVisible(true);
-        infoContainer.setVisible(true);
     }
 
-    /**
-     * Callback cuando la verificación se completa.
-     */
-    private void onVerificationComplete() {
-        // Desvincular el progreso
+    private void onBreachCheckComplete() {
         progressBar.progressProperty().unbind();
         progressLabel.textProperty().unbind();
-
-        // Completar la barra de progreso
         progressBar.setProgress(1.0);
-
-        // Habilitar botón de exportar si hay resultados
-        if (!results.isEmpty()) {
-            exportButton.setVisible(true);
-            exportButton.setDisable(false);
-        }
-
-        // Mostrar alerta si hay contraseñas comprometidas
-        long breachedCount = results.stream()
-                .filter(BreachCheckResult::isBreached)
-                .count();
-
-        if (breachedCount > 0) {
-            Platform.runLater(() -> {
-                Alert alert = new Alert(Alert.AlertType.WARNING);
-                alert.setTitle("Contraseñas Comprometidas Detectadas");
-                alert.setHeaderText("Se encontraron " + breachedCount + " contraseña(s) comprometida(s)");
-                alert.setContentText(
-                        "Se recomienda cambiar estas contraseñas lo antes posible.\n\n" +
-                        "Las contraseñas comprometidas han sido filtradas en brechas de seguridad " +
-                        "y son conocidas por hackers. Cambiarlas reducirá significativamente " +
-                        "el riesgo de que tus cuentas sean comprometidas."
-                );
-                alert.showAndWait();
-            });
-        }
-    }
-
-    @FXML
-    private void handleExport() {
-        // TODO: Implementar exportación de resultados a CSV
-        // Por ahora solo mostramos un mensaje
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Exportar Resultados");
-        alert.setHeaderText("Función en desarrollo");
-        alert.setContentText("La exportación de resultados estará disponible en una próxima versión.");
-        alert.showAndWait();
+        progressLabel.setText("Análisis completo");
     }
 
     @FXML
     private void handleClose() {
-        // Cancelar tarea si está en progreso
-        if (verificationTask != null && verificationTask.isRunning()) {
-            verificationTask.cancel();
+        if (breachTask != null && breachTask.isRunning()) {
+            breachTask.cancel();
         }
         dialogStage.close();
     }
 
-    /**
-     * Clase para almacenar el resultado de verificación de una contraseña.
-     */
-    public static class BreachCheckResult {
+    // ═══════════════════════════════════════════════════
+    //  CLASES INTERNAS DE RESULTADO
+    // ═══════════════════════════════════════════════════
+
+    public static class BreachResult {
         private final PasswordEntryDTO entry;
         private final boolean breached;
         private final int occurrences;
-        private final PasswordBreachService.SeverityLevel severityLevel;
+        private final PasswordBreachService.SeverityLevel severity;
         private final String error;
 
-        public BreachCheckResult(PasswordEntryDTO entry, boolean breached, int occurrences,
-                                 PasswordBreachService.SeverityLevel severityLevel, String error) {
+        public BreachResult(PasswordEntryDTO entry, boolean breached, int occurrences,
+                            PasswordBreachService.SeverityLevel severity, String error) {
             this.entry = entry;
             this.breached = breached;
             this.occurrences = occurrences;
-            this.severityLevel = severityLevel;
+            this.severity = severity;
             this.error = error;
         }
 
-        public PasswordEntryDTO getEntry() {
-            return entry;
+        public PasswordEntryDTO getEntry()                          { return entry; }
+        public boolean isBreached()                                 { return breached; }
+        public int getOccurrences()                                 { return occurrences; }
+        public PasswordBreachService.SeverityLevel getSeverity()    { return severity; }
+        public String getError()                                    { return error; }
+    }
+
+    public static class DuplicateResult {
+        private final PasswordEntryDTO entry;
+        private final int group;
+
+        public DuplicateResult(PasswordEntryDTO entry, int group) {
+            this.entry = entry;
+            this.group = group;
         }
 
-        public boolean isBreached() {
-            return breached;
+        public PasswordEntryDTO getEntry() { return entry; }
+        public int getGroup()              { return group; }
+    }
+
+    public static class WeakResult {
+        private final PasswordEntryDTO entry;
+        private final PasswordStrength strength;
+
+        public WeakResult(PasswordEntryDTO entry, PasswordStrength strength) {
+            this.entry = entry;
+            this.strength = strength;
         }
 
-        public int getOccurrences() {
-            return occurrences;
-        }
-
-        public PasswordBreachService.SeverityLevel getSeverityLevel() {
-            return severityLevel;
-        }
-
-        public String getError() {
-            return error;
-        }
+        public PasswordEntryDTO getEntry()    { return entry; }
+        public PasswordStrength getStrength() { return strength; }
     }
 }

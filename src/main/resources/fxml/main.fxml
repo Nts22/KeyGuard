@@ -71,6 +71,14 @@
 
                 <Separator style="-fx-background-color: #334155; -fx-padding: 8 0;"/>
 
+                <!-- Tema -->
+                <Label text="🎨 Tema" styleClass="sidebar-section-title"/>
+                <HBox style="-fx-padding: 0 12;">
+                    <ComboBox fx:id="themeSelector" styleClass="theme-combo" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                </HBox>
+
+                <Separator style="-fx-background-color: #334155; -fx-padding: 8 0;"/>
+
                 <!-- Sección de Cuenta (zona de peligro) -->
                 <Label text="⚙️ Cuenta" styleClass="sidebar-section-title"/>
 

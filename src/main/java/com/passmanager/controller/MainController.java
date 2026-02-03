@@ -7,6 +7,7 @@ import com.passmanager.service.AuthService;
 import com.passmanager.service.CategoryService;
 import com.passmanager.service.PasswordEntryService;
 import com.passmanager.service.PasswordHistoryService;
+import com.passmanager.service.ThemeService;
 import com.passmanager.util.ClipboardUtil;
 import com.passmanager.util.DialogUtil;
 import com.passmanager.util.FxmlLoaderUtil;
@@ -26,6 +27,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.StringConverter;
 import org.springframework.stereotype.Component;
 
 import java.net.URL;
@@ -50,6 +52,7 @@ public class MainController implements Initializable {
     @FXML private Label userInitialsLabel;
     @FXML private VBox sidebar;
     @FXML private Button toggleSidebarBtn;
+    @FXML private ComboBox<ThemeService.Theme> themeSelector;
     @FXML private Pagination pagination;
     @FXML private Label vaultStatusLabel;
     @FXML private Label autoLockTimerLabel;
@@ -67,6 +70,7 @@ public class MainController implements Initializable {
     private final PasswordHistoryService passwordHistoryService;
     private final com.passmanager.service.InactivityService inactivityService;
     private final com.passmanager.service.LockService lockService;
+    private final ThemeService themeService;
 
     private ObservableList<PasswordEntryDTO> passwordList = FXCollections.observableArrayList();
     private List<PasswordEntryDTO> allPasswords = new ArrayList<>();
@@ -83,7 +87,8 @@ public class MainController implements Initializable {
                           FxmlLoaderUtil fxmlLoaderUtil,
                           PasswordHistoryService passwordHistoryService,
                           com.passmanager.service.InactivityService inactivityService,
-                          com.passmanager.service.LockService lockService) {
+                          com.passmanager.service.LockService lockService,
+                          ThemeService themeService) {
         this.passwordEntryService = passwordEntryService;
         this.categoryService = categoryService;
         this.authService = authService;
@@ -93,6 +98,7 @@ public class MainController implements Initializable {
         this.passwordHistoryService = passwordHistoryService;
         this.inactivityService = inactivityService;
         this.lockService = lockService;
+        this.themeService = themeService;
     }
 
     @Override
@@ -104,6 +110,7 @@ public class MainController implements Initializable {
         loadPasswords();
         setupInactivityMonitoring();
         setupLockMonitoring();
+        setupThemeSelector();
     }
 
     private void loadCurrentUser() {
@@ -341,7 +348,7 @@ public class MainController implements Initializable {
             dialogStage.initOwner(passwordTable.getScene().getWindow());
 
             Scene scene = new Scene(formView);
-            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            themeService.applyToScene(scene);
             dialogStage.setScene(scene);
             dialogStage.setResizable(false);
 
@@ -519,7 +526,7 @@ public class MainController implements Initializable {
             dialogStage.initOwner(passwordTable.getScene().getWindow());
 
             Scene scene = new Scene(formView);
-            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            themeService.applyToScene(scene);
             dialogStage.setScene(scene);
             dialogStage.setResizable(false);
 
@@ -550,7 +557,7 @@ public class MainController implements Initializable {
             dialogStage.initOwner(passwordTable.getScene().getWindow());
 
             Scene scene = new Scene(detailView);
-            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            themeService.applyToScene(scene);
             dialogStage.setScene(scene);
             dialogStage.setResizable(false);
 
@@ -588,7 +595,7 @@ public class MainController implements Initializable {
             dialogStage.initOwner(passwordTable.getScene().getWindow());
 
             Scene scene = new Scene(historyView);
-            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            themeService.applyToScene(scene);
             dialogStage.setScene(scene);
             dialogStage.setResizable(false);
 
@@ -619,7 +626,7 @@ public class MainController implements Initializable {
             dialogStage.initOwner(passwordTable.getScene().getWindow());
 
             Scene scene = new Scene(formView);
-            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            themeService.applyToScene(scene);
             dialogStage.setScene(scene);
             dialogStage.setMinWidth(550);
             dialogStage.setMinHeight(500);
@@ -686,7 +693,7 @@ public class MainController implements Initializable {
 
             // Configurar la escena
             Scene scene = new Scene(breachCheckView);
-            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            themeService.applyToScene(scene);
             breachCheckStage.setScene(scene);
             breachCheckStage.setResizable(false);
 
@@ -740,7 +747,7 @@ public class MainController implements Initializable {
             exportStage.initOwner(passwordTable.getScene().getWindow());
 
             Scene scene = new Scene(exportView);
-            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            themeService.applyToScene(scene);
             exportStage.setScene(scene);
             exportStage.setResizable(false);
 
@@ -784,7 +791,7 @@ public class MainController implements Initializable {
             importStage.initOwner(passwordTable.getScene().getWindow());
 
             Scene scene = new Scene(importView);
-            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            themeService.applyToScene(scene);
             importStage.setScene(scene);
             importStage.setResizable(false);
 
@@ -826,7 +833,7 @@ public class MainController implements Initializable {
 
                 Stage stage = (Stage) passwordTable.getScene().getWindow();
                 Scene scene = new Scene(loginView);
-                scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+                themeService.applyToScene(scene);
                 stage.setScene(scene);
                 stage.setTitle("KeyGuard - Login");
                 stage.centerOnScreen();
@@ -893,7 +900,7 @@ public class MainController implements Initializable {
 
                 Stage stage = (Stage) passwordTable.getScene().getWindow();
                 Scene scene = new Scene(loginView);
-                scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+                themeService.applyToScene(scene);
                 stage.setScene(scene);
                 stage.setTitle("KeyGuard - Login");
                 stage.centerOnScreen();
@@ -1007,6 +1014,27 @@ public class MainController implements Initializable {
         });
     }
 
+    private void setupThemeSelector() {
+        themeSelector.setItems(FXCollections.observableArrayList(ThemeService.Theme.values()));
+        themeSelector.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(ThemeService.Theme theme) {
+                return theme != null ? theme.getDisplayName() : "";
+            }
+
+            @Override
+            public ThemeService.Theme fromString(String string) {
+                return null;
+            }
+        });
+        themeSelector.setValue(themeService.getCurrentTheme());
+        themeSelector.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                themeService.setCurrentTheme(newVal);
+            }
+        });
+    }
+
     /**
      * Maneja el bloqueo de la aplicación.
      * Muestra pantalla de desbloqueo en lugar de cerrar sesión.
@@ -1067,7 +1095,7 @@ public class MainController implements Initializable {
 
                 // Cambiar a pantalla de desbloqueo
                 Scene scene = new Scene(unlockView);
-                scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+                themeService.applyToScene(scene);
                 primaryStage.setScene(scene);
                 primaryStage.setTitle("KeyGuard - Bloqueada");
                 primaryStage.centerOnScreen();
@@ -1100,7 +1128,7 @@ public class MainController implements Initializable {
             Parent loginView = loader.load();
 
             Scene scene = new Scene(loginView);
-            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            themeService.applyToScene(scene);
             primaryStage.setScene(scene);
             primaryStage.setTitle("KeyGuard - Login");
             primaryStage.centerOnScreen();

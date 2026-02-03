@@ -2,6 +2,7 @@ package com.passmanager;
 
 import com.passmanager.config.AppConfig;
 import com.passmanager.config.DatabaseInitializer;
+import com.passmanager.service.ThemeService;
 import com.passmanager.util.FxmlLoaderUtil;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -31,7 +32,7 @@ public class PasswordManagerApplication extends Application {
         Parent root = fxmlLoaderUtil.loadFxml("/fxml/login.fxml");
 
         Scene scene = new Scene(root, 400, 500);
-        scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+        springContext.getBean(ThemeService.class).applyToScene(scene);
 
         primaryStage.setTitle(AppConfig.APP_NAME);
         primaryStage.setScene(scene);

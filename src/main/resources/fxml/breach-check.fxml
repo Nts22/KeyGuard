@@ -9,76 +9,115 @@
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.passmanager.controller.BreachCheckController"
       styleClass="dialog-container"
-      prefHeight="700" prefWidth="900"
-      spacing="20">
+      prefHeight="700" prefWidth="920"
+      spacing="18">
 
     <padding>
-        <Insets topRightBottomLeft="30"/>
+        <Insets topRightBottomLeft="25"/>
     </padding>
 
-    <!-- Título y descripción -->
-    <VBox spacing="10">
-        <Text text="🔍 Verificación de Contraseñas Filtradas" styleClass="dialog-title"/>
-        <Label text="Verificando tus contraseñas contra la base de datos de Have I Been Pwned"
+    <!-- Título -->
+    <VBox spacing="6">
+        <Text text="🛡️ Dashboard de Seguridad" styleClass="dialog-title"/>
+        <Label text="Análisis de brechas conocidas, contraseñas duplicadas y débiles"
                styleClass="dialog-subtitle" wrapText="true"/>
     </VBox>
 
-    <!-- Indicador de progreso -->
-    <VBox fx:id="progressContainer" spacing="10" visible="true">
-        <ProgressBar fx:id="progressBar" prefWidth="Infinity" progress="0"/>
-        <Label fx:id="progressLabel" text="Preparando verificación..." styleClass="field-label"/>
-    </VBox>
-
-    <!-- Resumen de resultados -->
-    <HBox fx:id="summaryContainer" spacing="20" visible="false" styleClass="card" style="-fx-padding: 15;">
-        <VBox spacing="5" alignment="CENTER" HBox.hgrow="ALWAYS">
-            <Label text="Total Verificadas" styleClass="field-label"/>
-            <Label fx:id="totalLabel" text="0" style="-fx-font-size: 24px; -fx-font-weight: bold;"/>
+    <!-- Resumen: 4 cajas -->
+    <HBox spacing="12">
+        <VBox spacing="4" alignment="CENTER" HBox.hgrow="ALWAYS" styleClass="card"
+              style="-fx-padding: 10 8; -fx-background-color: #f8fafc;">
+            <Label text="Total" styleClass="field-label"/>
+            <Label fx:id="totalLabel" text="0" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #1e293b;"/>
         </VBox>
-        <VBox spacing="5" alignment="CENTER" HBox.hgrow="ALWAYS">
-            <Label text="Seguras ✅" styleClass="field-label"/>
-            <Label fx:id="safeLabel" text="0" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #22c55e;"/>
+        <VBox spacing="4" alignment="CENTER" HBox.hgrow="ALWAYS" styleClass="card"
+              style="-fx-padding: 10 8; -fx-border-color: #ef4444; -fx-border-width: 2; -fx-border-radius: 12; -fx-background-color: rgba(239,68,68,0.06); -fx-background-radius: 12;">
+            <Label text="Comprometidas" styleClass="field-label"/>
+            <Label fx:id="breachedLabel" text="—" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #ef4444;"/>
         </VBox>
-        <VBox spacing="5" alignment="CENTER" HBox.hgrow="ALWAYS">
-            <Label text="Comprometidas ⚠️" styleClass="field-label"/>
-            <Label fx:id="breachedLabel" text="0" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #ef4444;"/>
+        <VBox spacing="4" alignment="CENTER" HBox.hgrow="ALWAYS" styleClass="card"
+              style="-fx-padding: 10 8; -fx-border-color: #f97316; -fx-border-width: 2; -fx-border-radius: 12; -fx-background-color: rgba(249,115,22,0.06); -fx-background-radius: 12;">
+            <Label text="Duplicadas" styleClass="field-label"/>
+            <Label fx:id="duplicatesLabel" text="0" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #f97316;"/>
+        </VBox>
+        <VBox spacing="4" alignment="CENTER" HBox.hgrow="ALWAYS" styleClass="card"
+              style="-fx-padding: 10 8; -fx-border-color: #eab308; -fx-border-width: 2; -fx-border-radius: 12; -fx-background-color: rgba(234,179,8,0.06); -fx-background-radius: 12;">
+            <Label text="Débiles" styleClass="field-label"/>
+            <Label fx:id="weakLabel" text="0" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #eab308;"/>
         </VBox>
     </HBox>
 
-    <!-- Tabla de resultados -->
-    <TableView fx:id="resultsTable" VBox.vgrow="ALWAYS" visible="false">
-        <columns>
-            <TableColumn fx:id="statusColumn" text="Estado" prefWidth="80"/>
-            <TableColumn fx:id="titleColumn" text="Título" prefWidth="200"/>
-            <TableColumn fx:id="usernameColumn" text="Usuario" prefWidth="150"/>
-            <TableColumn fx:id="severityColumn" text="Severidad" prefWidth="150"/>
-            <TableColumn fx:id="occurrencesColumn" text="Apariciones" prefWidth="120"/>
-            <TableColumn fx:id="recommendationColumn" text="Recomendación" prefWidth="200"/>
-        </columns>
-        <placeholder>
-            <Label text="No hay resultados para mostrar"/>
-        </placeholder>
-    </TableView>
-
-    <!-- Mensaje informativo -->
-    <VBox fx:id="infoContainer" spacing="10" visible="false" styleClass="card"
-          style="-fx-padding: 15; -fx-background-color: #eff6ff;">
-        <Label text="ℹ️ Información sobre la verificación:"
-               style="-fx-font-weight: bold; -fx-text-fill: #2563eb;"/>
-        <Label text="• Esta verificación usa la API gratuita de Have I Been Pwned (HIBP)"
-               wrapText="true" style="-fx-text-fill: #1e40af;"/>
-        <Label text="• Nunca enviamos tus contraseñas completas - solo los primeros 5 caracteres del hash SHA-1"
-               wrapText="true" style="-fx-text-fill: #1e40af;"/>
-        <Label text="• HIBP contiene más de 12 mil millones de contraseñas de brechas reales"
-               wrapText="true" style="-fx-text-fill: #1e40af;"/>
-        <Label text="• Se recomienda cambiar cualquier contraseña que aparezca como comprometida"
-               wrapText="true" style="-fx-text-fill: #1e40af;"/>
+    <!-- Progreso (solo durante verificación de brechas) -->
+    <VBox fx:id="progressContainer" spacing="6" visible="false">
+        <ProgressBar fx:id="progressBar" prefWidth="Infinity" progress="0"/>
+        <Label fx:id="progressLabel" text="Iniciando verificación de brechas..." styleClass="field-label"/>
     </VBox>
+
+    <!-- Pestañas -->
+    <TabPane fx:id="tabPane" VBox.vgrow="ALWAYS" tabClosingPolicy="UNAVAILABLE" styleClass="security-tab-pane">
+
+        <!-- Pestaña: Brechas conocidas -->
+        <Tab text="Brechas conocidas">
+            <VBox VBox.vgrow="ALWAYS" spacing="8">
+                <TableView fx:id="breachTable" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="breachStatusColumn" text="" prefWidth="50"/>
+                        <TableColumn fx:id="breachTitleColumn" text="Título" prefWidth="175"/>
+                        <TableColumn fx:id="breachUsernameColumn" text="Usuario" prefWidth="135"/>
+                        <TableColumn fx:id="breachSeverityColumn" text="Severidad" prefWidth="120"/>
+                        <TableColumn fx:id="breachOccurrencesColumn" text="Apariciones" prefWidth="105"/>
+                        <TableColumn fx:id="breachRecommendationColumn" text="Recomendación" prefWidth="240"/>
+                    </columns>
+                    <placeholder>
+                        <Label text="No hay contraseñas comprometidas"/>
+                    </placeholder>
+                </TableView>
+                <Label text="ℹ️ Usa Have I Been Pwned — solo se envían los primeros 5 caracteres del hash SHA-1, nunca la contraseña completa."
+                       wrapText="true" style="-fx-font-size: 11px; -fx-text-fill: #64748b; -fx-padding: 0 4;"/>
+            </VBox>
+        </Tab>
+
+        <!-- Pestaña: Duplicadas -->
+        <Tab text="Duplicadas">
+            <VBox VBox.vgrow="ALWAYS" spacing="8">
+                <TableView fx:id="duplicatesTable" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="dupTitleColumn" text="Título" prefWidth="220"/>
+                        <TableColumn fx:id="dupUsernameColumn" text="Usuario" prefWidth="160"/>
+                        <TableColumn fx:id="dupEmailColumn" text="Email" prefWidth="210"/>
+                        <TableColumn fx:id="dupGroupColumn" text="Grupo" prefWidth="80"/>
+                    </columns>
+                    <placeholder>
+                        <Label text="No hay contraseñas duplicadas"/>
+                    </placeholder>
+                </TableView>
+                <Label text="ℹ️ Las entradas del mismo grupo comparten la misma contraseña. Se recomienda usar una contraseña única por sitio."
+                       wrapText="true" style="-fx-font-size: 11px; -fx-text-fill: #64748b; -fx-padding: 0 4;"/>
+            </VBox>
+        </Tab>
+
+        <!-- Pestaña: Débiles -->
+        <Tab text="Débiles">
+            <VBox VBox.vgrow="ALWAYS" spacing="8">
+                <TableView fx:id="weakTable" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="weakTitleColumn" text="Título" prefWidth="230"/>
+                        <TableColumn fx:id="weakUsernameColumn" text="Usuario" prefWidth="170"/>
+                        <TableColumn fx:id="weakStrengthColumn" text="Fortaleza" prefWidth="130"/>
+                        <TableColumn fx:id="weakLengthColumn" text="Largo" prefWidth="80"/>
+                    </columns>
+                    <placeholder>
+                        <Label text="Todas tus contraseñas son fuertes"/>
+                    </placeholder>
+                </TableView>
+                <Label text="ℹ️ Se muestran las clasificadas como 'Muy débil' o 'Débil'. Considera cambiarlas por contraseñas más largas y complejas."
+                       wrapText="true" style="-fx-font-size: 11px; -fx-text-fill: #64748b; -fx-padding: 0 4;"/>
+            </VBox>
+        </Tab>
+    </TabPane>
 
     <!-- Botones -->
     <HBox spacing="10" alignment="CENTER_RIGHT">
-        <Button fx:id="exportButton" text="Exportar Resultados" onAction="#handleExport"
-                visible="false" disable="true"/>
         <Button text="Cerrar" onAction="#handleClose" styleClass="btn-secondary"/>
     </HBox>
 

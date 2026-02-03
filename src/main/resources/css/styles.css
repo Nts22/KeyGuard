@@ -868,3 +868,45 @@
     -fx-text-fill: #64748b;
     -fx-padding: 5 0;
 }
+
+/* Dashboard de Seguridad – TabPane */
+.security-tab-pane .tab {
+    -fx-background-color: #f1f5f9;
+    -fx-background-radius: 6 6 0 0;
+    -fx-padding: 8 18;
+    -fx-font-size: 13px;
+    -fx-text-fill: #64748b;
+    -fx-font-weight: normal;
+}
+
+.security-tab-pane .tab:selected {
+    -fx-background-color: #ffffff;
+    -fx-text-fill: #2563eb;
+    -fx-font-weight: bold;
+}
+
+.security-tab-pane .tab-content-area {
+    -fx-background-color: #ffffff;
+    -fx-padding: 12;
+    -fx-border-color: #e2e8f0;
+    -fx-border-radius: 0 0 8 8;
+    -fx-background-radius: 0 0 8 8;
+}
+
+/* Selector de tema en sidebar */
+.theme-combo {
+    -fx-background-color: rgba(51, 65, 85, 0.6);
+    -fx-border-color: rgba(148, 163, 184, 0.3);
+    -fx-text-fill: #cbd5e1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-font-size: 13px;
+}
+
+.theme-combo .combo-box-arrow-button {
+    -fx-background-color: transparent;
+}
+
+.theme-combo .combo-box-arrow-button .arrow {
+    -fx-background-color: #94a3b8;
+}
