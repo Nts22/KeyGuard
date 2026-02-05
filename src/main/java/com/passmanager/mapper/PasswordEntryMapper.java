@@ -33,7 +33,7 @@ public class PasswordEntryMapper {
     }
 
     public PasswordEntryDTO toDTO(PasswordEntry entry, boolean includeCustomFields) {
-        String decryptedPassword = decryptField(entry.getPassword());
+        String decryptedPassword = decryptAndVerify(entry);
 
         List<PasswordEntryDTO.CustomFieldDTO> customFieldDTOs = new ArrayList<>();
         if (includeCustomFields && entry.getCustomFields() != null) {
@@ -63,6 +63,7 @@ public class PasswordEntryMapper {
         entry.setUsername(dto.getUsername());
         entry.setEmail(dto.getEmail());
         entry.setPassword(encryptionService.encrypt(dto.getPassword()));
+        entry.setHmacTag(encryptionService.sign(entry.getPassword()));
         entry.setUrl(dto.getUrl());
         entry.setNotes(dto.getNotes());
 
@@ -99,6 +100,25 @@ public class PasswordEntryMapper {
                 .fieldValue(value)
                 .sensitive(field.isSensitive())
                 .build();
+    }
+
+    /**
+     * Descifra la contraseña de una entrada verificando primero la firma HMAC (Key C).
+     * Si hmacTag es nulo (datos pre-migración) se descifra sin verificar firma.
+     */
+    private String decryptAndVerify(PasswordEntry entry) {
+        try {
+            if (entry.getHmacTag() != null) {
+                if (!encryptionService.verifySignature(entry.getPassword(), entry.getHmacTag())) {
+                    log.warn("Firma HMAC inválida para entrada id={}", entry.getId());
+                    return DECRYPTION_ERROR;
+                }
+            }
+            return encryptionService.decrypt(entry.getPassword());
+        } catch (Exception e) {
+            log.warn("Error al desencriptar entrada id={}: {}", entry.getId(), e.getMessage());
+            return DECRYPTION_ERROR;
+        }
     }
 
     private String decryptField(String encryptedValue) {

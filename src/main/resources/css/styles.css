@@ -910,3 +910,21 @@
 .theme-combo .combo-box-arrow-button .arrow {
     -fx-background-color: #94a3b8;
 }
+
+/* Scroll de categorías en sidebar */
+.sidebar-scroll .scroll-bar:vertical {
+    -fx-background-color: transparent;
+}
+
+.sidebar-scroll .scroll-bar:vertical .thumb {
+    -fx-background-color: rgba(148, 163, 184, 0.25);
+    -fx-background-radius: 3;
+}
+
+.sidebar-scroll .scroll-bar:vertical .increment-button,
+.sidebar-scroll .scroll-bar:vertical .decrement-button {
+    -fx-background-color: transparent;
+    -fx-pref-height: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
+}

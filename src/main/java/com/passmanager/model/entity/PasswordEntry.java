@@ -38,6 +38,9 @@ public class PasswordEntry {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @Column(columnDefinition = "TEXT")
+    private String hmacTag;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -77,10 +80,5 @@ public class PasswordEntry {
     public void addCustomField(CustomField field) {
         customFields.add(field);
         field.setPasswordEntry(this);
-    }
-
-    public void removeCustomField(CustomField field) {
-        customFields.remove(field);
-        field.setPasswordEntry(null);
     }
 }

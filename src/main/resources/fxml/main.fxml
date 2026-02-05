@@ -36,22 +36,22 @@
 
                 <Label text="📁 Categorías" styleClass="sidebar-section-title"/>
 
-                <VBox styleClass="categories-group" spacing="0">
-                    <Button fx:id="allCategoriesBtn" text="Todas"
-                            styleClass="category-item, category-item-selected"
-                            onAction="#handleAllCategories" maxWidth="Infinity"/>
+                <ScrollPane VBox.vgrow="ALWAYS" fitToWidth="true" hbarPolicy="NEVER" styleClass="sidebar-scroll">
+                    <VBox styleClass="categories-group" spacing="0">
+                        <Button fx:id="allCategoriesBtn" text="Todas"
+                                styleClass="category-item, category-item-selected"
+                                onAction="#handleAllCategories" maxWidth="Infinity"/>
 
-                    <VBox fx:id="categoriesContainer" spacing="0">
-                        <!-- Las categorías se cargan dinámicamente -->
+                        <VBox fx:id="categoriesContainer" spacing="0">
+                            <!-- Las categorías se cargan dinámicamente -->
+                        </VBox>
+
+                        <Separator style="-fx-background-color: rgba(148, 163, 184, 0.15); -fx-padding: 4 0;"/>
+
+                        <Button text="+ Nueva Categoría" styleClass="category-item"
+                                onAction="#handleNewCategory" maxWidth="Infinity"/>
                     </VBox>
-
-                    <Separator style="-fx-background-color: rgba(148, 163, 184, 0.15); -fx-padding: 4 0;"/>
-
-                    <Button text="+ Nueva Categoría" styleClass="category-item"
-                            onAction="#handleNewCategory" maxWidth="Infinity"/>
-                </VBox>
-
-                <Region VBox.vgrow="ALWAYS"/>
+                </ScrollPane>
 
                 <Separator style="-fx-background-color: #334155; -fx-padding: 8 0;"/>
 

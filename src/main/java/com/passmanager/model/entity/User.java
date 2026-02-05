@@ -38,6 +38,9 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String encryptedMasterPassword;
 
+    @Column
+    private Integer keyVersion;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<PasswordEntry> passwordEntries = new ArrayList<>();
