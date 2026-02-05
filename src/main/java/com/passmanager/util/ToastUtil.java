@@ -38,16 +38,6 @@ public class ToastUtil {
     }
 
     /**
-     * Muestra una notificación informativa (azul).
-     *
-     * @param owner Ventana padre
-     * @param message Mensaje a mostrar
-     */
-    public void showInfo(Window owner, String message) {
-        showToast(owner, message, ToastType.INFO);
-    }
-
-    /**
      * Muestra una notificación de advertencia (amarillo).
      *
      * @param owner Ventana padre

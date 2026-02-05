@@ -3,7 +3,6 @@ package com.passmanager.controller;
 import com.passmanager.config.AppConfig;
 import com.passmanager.model.dto.UserDTO;
 import com.passmanager.service.AuthService;
-import com.passmanager.service.CategoryService;
 import com.passmanager.service.ThemeService;
 import com.passmanager.util.FxmlLoaderUtil;
 import javafx.collections.FXCollections;
@@ -43,17 +42,15 @@ public class LoginController implements Initializable {
     @FXML private Button toggleConfirmButton;
 
     private final AuthService authService;
-    private final CategoryService categoryService;
     private final FxmlLoaderUtil fxmlLoaderUtil;
     private final ThemeService themeService;
 
     private boolean isRegisterMode;
     private boolean hasUsers;
 
-    public LoginController(AuthService authService, CategoryService categoryService,
+    public LoginController(AuthService authService,
                            FxmlLoaderUtil fxmlLoaderUtil, ThemeService themeService) {
         this.authService = authService;
-        this.categoryService = categoryService;
         this.fxmlLoaderUtil = fxmlLoaderUtil;
         this.themeService = themeService;
     }

@@ -66,10 +66,6 @@ public class PasswordGeneratorUtil {
         return shuffle(password.toString());
     }
 
-    public String generate(int length) {
-        return generate(length, true, true, true, true, false);
-    }
-
     private String removeAmbiguous(String str) {
         StringBuilder result = new StringBuilder();
         for (char c : str.toCharArray()) {

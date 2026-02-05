@@ -66,13 +66,4 @@ public class LoginAttemptServiceImpl implements LoginAttemptService {
         return Math.max(0, remaining);
     }
 
-    @Override
-    public int getMaxAttempts() {
-        return MAX_ATTEMPTS;
-    }
-
-    @Override
-    public long getBlockDurationMinutes() {
-        return BLOCK_DURATION_MINUTES;
-    }
 }

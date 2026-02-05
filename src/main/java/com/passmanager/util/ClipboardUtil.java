@@ -60,11 +60,6 @@ public class ClipboardUtil {
         lastCopiedText = null;
     }
 
-    public String getFromClipboard() {
-        Clipboard clipboard = Clipboard.getSystemClipboard();
-        return clipboard.hasString() ? clipboard.getString() : "";
-    }
-
     public int getClearDelaySeconds() {
         return CLIPBOARD_CLEAR_DELAY_SECONDS;
     }

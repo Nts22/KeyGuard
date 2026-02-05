@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class CategoryServiceImpl implements CategoryService {
@@ -38,16 +37,6 @@ public class CategoryServiceImpl implements CategoryService {
         return categoryRepository.findByUserOrderByNameAsc(getCurrentUser()).stream()
                 .map(categoryMapper::toDTO)
                 .toList();
-    }
-
-    @Override
-    public Optional<Category> findById(Long id) {
-        return categoryRepository.findByIdAndUser(id, getCurrentUser());
-    }
-
-    @Override
-    public Optional<Category> findByName(String name) {
-        return categoryRepository.findByNameAndUser(name, getCurrentUser());
     }
 
     @Override
@@ -84,11 +73,6 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public void delete(Long id) {
         categoryRepository.deleteByIdAndUser(id, getCurrentUser());
-    }
-
-    @Override
-    public long countEntries(Category category) {
-        return categoryMapper.countEntries(category);
     }
 
     @Override

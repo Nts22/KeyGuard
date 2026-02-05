@@ -81,9 +81,8 @@ public class PasswordHistoryServiceImpl implements PasswordHistoryService {
                 .toList();
     }
 
-    @Override
     @Transactional
-    public void cleanupOldHistory(PasswordEntry entry, int maxVersions) {
+    private void cleanupOldHistory(PasswordEntry entry, int maxVersions) {
         long count = historyRepository.countByPasswordEntry(entry);
 
         // Eliminar versiones más antiguas mientras se exceda el límite
@@ -100,14 +99,4 @@ public class PasswordHistoryServiceImpl implements PasswordHistoryService {
         }
     }
 
-    @Override
-    @Transactional
-    public void deleteHistory(Long passwordEntryId) {
-        // Verificar que la entrada existe y pertenece al usuario actual (seguridad)
-        PasswordEntry entry = entryRepository.findByIdAndUser(passwordEntryId, userService.getCurrentUser())
-                .orElseThrow(() -> new ResourceNotFoundException("PasswordEntry", passwordEntryId));
-
-        // Eliminar todo el historial de esta entrada
-        historyRepository.deleteByPasswordEntry(entry);
-    }
 }

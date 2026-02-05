@@ -34,22 +34,4 @@ public interface PasswordHistoryService {
      * @throws com.passmanager.exception.ResourceNotFoundException si la entrada no existe
      */
     List<PasswordHistoryDTO> getHistory(Long passwordEntryId);
-
-    /**
-     * Limpia versiones antiguas del historial, manteniendo solo las últimas N versiones.
-     * Se llama automáticamente después de guardar una nueva versión.
-     *
-     * @param entry Entrada cuyo historial se quiere limpiar
-     * @param maxVersions Número máximo de versiones a mantener (ej: 10)
-     */
-    void cleanupOldHistory(PasswordEntry entry, int maxVersions);
-
-    /**
-     * Elimina todo el historial de una entrada específica.
-     * Usado principalmente cuando se elimina la entrada completa.
-     *
-     * @param passwordEntryId ID de la entrada
-     * @throws com.passmanager.exception.ResourceNotFoundException si la entrada no existe
-     */
-    void deleteHistory(Long passwordEntryId);
 }

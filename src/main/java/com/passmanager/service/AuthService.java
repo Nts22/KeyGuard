@@ -57,16 +57,10 @@ public interface AuthService {
      * Resultado de la creación de usuario que incluye el usuario y la recovery key.
      */
     class UserCreationResult {
-        private final User user;
         private final String recoveryKey;
 
-        public UserCreationResult(User user, String recoveryKey) {
-            this.user = user;
+        public UserCreationResult(String recoveryKey) {
             this.recoveryKey = recoveryKey;
-        }
-
-        public User getUser() {
-            return user;
         }
 
         public String getRecoveryKey() {

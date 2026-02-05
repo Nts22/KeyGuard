@@ -239,7 +239,7 @@ public class PasswordFormController implements Initializable {
         Button removeBtn = new Button("X");
         removeBtn.setStyle("-fx-background-color: #ef4444; -fx-text-fill: white; -fx-font-size: 10px; -fx-padding: 2 6;");
 
-        CustomFieldRow fieldRow = new CustomFieldRow(row, nameField, valueField, sensitiveCheck);
+        CustomFieldRow fieldRow = new CustomFieldRow(nameField, valueField, sensitiveCheck);
         customFieldRows.add(fieldRow);
 
         removeBtn.setOnAction(e -> {
@@ -445,13 +445,11 @@ public class PasswordFormController implements Initializable {
     }
 
     private static class CustomFieldRow {
-        HBox container;
         TextField nameField;
         TextField valueField;
         CheckBox sensitiveCheck;
 
-        CustomFieldRow(HBox container, TextField nameField, TextField valueField, CheckBox sensitiveCheck) {
-            this.container = container;
+        CustomFieldRow(TextField nameField, TextField valueField, CheckBox sensitiveCheck) {
             this.nameField = nameField;
             this.valueField = valueField;
             this.sensitiveCheck = sensitiveCheck;

@@ -28,7 +28,6 @@ public class CategoryFormController implements Initializable {
     private Stage dialogStage;
     private CategoryDTO currentCategory;
     private Runnable onSaveCallback;
-    private boolean saved = false;
 
     public CategoryFormController(CategoryService categoryService) {
         this.categoryService = categoryService;
@@ -61,10 +60,6 @@ public class CategoryFormController implements Initializable {
         this.onSaveCallback = callback;
     }
 
-    public boolean isSaved() {
-        return saved;
-    }
-
     @FXML
     private void handleSave() {
         hideError();
@@ -84,8 +79,6 @@ public class CategoryFormController implements Initializable {
             } else {
                 categoryService.create(name, icon);
             }
-
-            saved = true;
 
             if (onSaveCallback != null) {
                 onSaveCallback.run();

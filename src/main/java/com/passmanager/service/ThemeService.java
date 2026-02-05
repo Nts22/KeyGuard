@@ -12,8 +12,6 @@ import java.util.*;
 @Service
 public class ThemeService {
 
-    private static ThemeService instance;
-
     private static final String PREFS_DIR = System.getProperty("user.home") + "/.passmanager";
     private static final String PREFS_FILE = PREFS_DIR + "/theme.properties";
     private static final String BASE_CSS = "/css/styles.css";
@@ -38,11 +36,8 @@ public class ThemeService {
     }
 
     public ThemeService() {
-        instance = this;
         currentTheme = loadThemeFromPrefs();
     }
-
-    public static ThemeService getInstance() { return instance; }
 
     public Theme getCurrentTheme() { return currentTheme; }
 

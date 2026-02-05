@@ -11,8 +11,4 @@ public interface LoginAttemptService {
     int getRemainingAttempts(String username);
 
     long getBlockTimeRemainingSeconds(String username);
-
-    int getMaxAttempts();
-
-    long getBlockDurationMinutes();
 }

@@ -2,11 +2,9 @@ package com.passmanager.controller;
 
 import com.passmanager.model.dto.CategoryDTO;
 import com.passmanager.model.dto.PasswordEntryDTO;
-import com.passmanager.model.dto.PasswordHistoryDTO;
 import com.passmanager.service.AuthService;
 import com.passmanager.service.CategoryService;
 import com.passmanager.service.PasswordEntryService;
-import com.passmanager.service.PasswordHistoryService;
 import com.passmanager.service.ThemeService;
 import com.passmanager.util.ClipboardUtil;
 import com.passmanager.util.DialogUtil;
@@ -20,8 +18,6 @@ import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.control.ContextMenu;
-import javafx.scene.control.MenuItem;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -54,7 +50,6 @@ public class MainController implements Initializable {
     @FXML private Button toggleSidebarBtn;
     @FXML private ComboBox<ThemeService.Theme> themeSelector;
     @FXML private Pagination pagination;
-    @FXML private Label vaultStatusLabel;
     @FXML private Label autoLockTimerLabel;
     @FXML private Button manualLockBtn;
 
@@ -67,7 +62,6 @@ public class MainController implements Initializable {
     private final ClipboardUtil clipboardUtil;
     private final DialogUtil dialogUtil;
     private final FxmlLoaderUtil fxmlLoaderUtil;
-    private final PasswordHistoryService passwordHistoryService;
     private final com.passmanager.service.InactivityService inactivityService;
     private final com.passmanager.service.LockService lockService;
     private final ThemeService themeService;
@@ -85,7 +79,6 @@ public class MainController implements Initializable {
                           ClipboardUtil clipboardUtil,
                           DialogUtil dialogUtil,
                           FxmlLoaderUtil fxmlLoaderUtil,
-                          PasswordHistoryService passwordHistoryService,
                           com.passmanager.service.InactivityService inactivityService,
                           com.passmanager.service.LockService lockService,
                           ThemeService themeService) {
@@ -95,7 +88,6 @@ public class MainController implements Initializable {
         this.clipboardUtil = clipboardUtil;
         this.dialogUtil = dialogUtil;
         this.fxmlLoaderUtil = fxmlLoaderUtil;
-        this.passwordHistoryService = passwordHistoryService;
         this.inactivityService = inactivityService;
         this.lockService = lockService;
         this.themeService = themeService;
@@ -859,21 +851,12 @@ public class MainController implements Initializable {
     }
 
     private void setupInactivityMonitoring() {
-        // Iniciar monitoreo de inactividad
         inactivityService.startMonitoring(this::handleInactivityLogout);
+    }
 
-        // Agregar listeners para eventos de actividad en la escena
-        javafx.application.Platform.runLater(() -> {
-            if (passwordTable.getScene() != null) {
-                // Resetear timer en cualquier evento de mouse o teclado
-                passwordTable.getScene().setOnMouseMoved(event -> inactivityService.resetTimer());
-                passwordTable.getScene().setOnMousePressed(event -> inactivityService.resetTimer());
-                passwordTable.getScene().setOnMouseClicked(event -> inactivityService.resetTimer());
-                passwordTable.getScene().setOnKeyPressed(event -> inactivityService.resetTimer());
-                passwordTable.getScene().setOnKeyReleased(event -> inactivityService.resetTimer());
-                passwordTable.getScene().setOnScroll(event -> inactivityService.resetTimer());
-            }
-        });
+    private void onActivityDetected() {
+        inactivityService.resetTimer();
+        lockService.resetTimer();
     }
 
     private void handleInactivityLogout() {
@@ -1000,13 +983,13 @@ public class MainController implements Initializable {
                     }
                 });
 
-                // Resetear timer en cualquier actividad del usuario
-                passwordTable.getScene().setOnMouseMoved(event -> lockService.resetTimer());
-                passwordTable.getScene().setOnMousePressed(event -> lockService.resetTimer());
-                passwordTable.getScene().setOnMouseClicked(event -> lockService.resetTimer());
-                passwordTable.getScene().setOnKeyPressed(event -> lockService.resetTimer());
-                passwordTable.getScene().setOnKeyReleased(event -> lockService.resetTimer());
-                passwordTable.getScene().setOnScroll(event -> lockService.resetTimer());
+                // Resetear ambos timers (bloqueo + logout) en cualquier actividad
+                passwordTable.getScene().setOnMouseMoved(event -> onActivityDetected());
+                passwordTable.getScene().setOnMousePressed(event -> onActivityDetected());
+                passwordTable.getScene().setOnMouseClicked(event -> onActivityDetected());
+                passwordTable.getScene().setOnKeyPressed(event -> onActivityDetected());
+                passwordTable.getScene().setOnKeyReleased(event -> onActivityDetected());
+                passwordTable.getScene().setOnScroll(event -> onActivityDetected());
 
                 // Iniciar actualización visual del contador
                 startLockTimerUpdater();

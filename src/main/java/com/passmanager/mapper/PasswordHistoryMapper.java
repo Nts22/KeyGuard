@@ -1,7 +1,6 @@
 package com.passmanager.mapper;
 
 import com.passmanager.model.dto.PasswordHistoryDTO;
-import com.passmanager.model.entity.PasswordEntry;
 import com.passmanager.model.entity.PasswordHistory;
 import com.passmanager.service.EncryptionService;
 import org.springframework.stereotype.Component;
@@ -49,18 +48,4 @@ public class PasswordHistoryMapper {
                 .build();
     }
 
-    /**
-     * Convierte un DTO a entidad PasswordHistory.
-     * Encripta la contraseña antes de guardar.
-     *
-     * @param dto DTO con datos en texto plano
-     * @param entry Entrada a la que pertenece este historial
-     * @return Entidad con contraseña encriptada
-     */
-    public PasswordHistory toEntity(PasswordHistoryDTO dto, PasswordEntry entry) {
-        return PasswordHistory.builder()
-                .passwordEntry(entry)
-                .password(encryptionService.encrypt(dto.getPassword()))
-                .build();
-    }
 }
