@@ -341,6 +341,7 @@ public class MainController implements Initializable {
 
             Scene scene = new Scene(formView);
             themeService.applyToScene(scene);
+            attachActivityListeners(scene);
             dialogStage.setScene(scene);
             dialogStage.setResizable(false);
 
@@ -519,6 +520,7 @@ public class MainController implements Initializable {
 
             Scene scene = new Scene(formView);
             themeService.applyToScene(scene);
+            attachActivityListeners(scene);
             dialogStage.setScene(scene);
             dialogStage.setResizable(false);
 
@@ -550,6 +552,7 @@ public class MainController implements Initializable {
 
             Scene scene = new Scene(detailView);
             themeService.applyToScene(scene);
+            attachActivityListeners(scene);
             dialogStage.setScene(scene);
             dialogStage.setResizable(false);
 
@@ -588,6 +591,7 @@ public class MainController implements Initializable {
 
             Scene scene = new Scene(historyView);
             themeService.applyToScene(scene);
+            attachActivityListeners(scene);
             dialogStage.setScene(scene);
             dialogStage.setResizable(false);
 
@@ -619,6 +623,7 @@ public class MainController implements Initializable {
 
             Scene scene = new Scene(formView);
             themeService.applyToScene(scene);
+            attachActivityListeners(scene); // Resetear timer de inactividad al escribir en el formulario
             dialogStage.setScene(scene);
             dialogStage.setMinWidth(550);
             dialogStage.setMinHeight(500);
@@ -686,6 +691,7 @@ public class MainController implements Initializable {
             // Configurar la escena
             Scene scene = new Scene(breachCheckView);
             themeService.applyToScene(scene);
+            attachActivityListeners(scene);
             breachCheckStage.setScene(scene);
             breachCheckStage.setResizable(false);
 
@@ -740,6 +746,7 @@ public class MainController implements Initializable {
 
             Scene scene = new Scene(exportView);
             themeService.applyToScene(scene);
+            attachActivityListeners(scene);
             exportStage.setScene(scene);
             exportStage.setResizable(false);
 
@@ -784,6 +791,7 @@ public class MainController implements Initializable {
 
             Scene scene = new Scene(importView);
             themeService.applyToScene(scene);
+            attachActivityListeners(scene);
             importStage.setScene(scene);
             importStage.setResizable(false);
 
@@ -857,6 +865,19 @@ public class MainController implements Initializable {
     private void onActivityDetected() {
         inactivityService.resetTimer();
         lockService.resetTimer();
+    }
+
+    /**
+     * Adjunta listeners de actividad a una Scene para resetear timers de inactividad/bloqueo.
+     * Usar esto en diálogos para que la actividad en ellos también cuente como actividad del usuario.
+     */
+    private void attachActivityListeners(Scene scene) {
+        scene.setOnMouseMoved(event -> onActivityDetected());
+        scene.setOnMousePressed(event -> onActivityDetected());
+        scene.setOnMouseClicked(event -> onActivityDetected());
+        scene.setOnKeyPressed(event -> onActivityDetected());
+        scene.setOnKeyReleased(event -> onActivityDetected());
+        scene.setOnScroll(event -> onActivityDetected());
     }
 
     private void handleInactivityLogout() {
