@@ -21,7 +21,7 @@ public class ThemeService {
 
     public enum Theme {
         LIGHT("Claro", null),
-        OCEAN("Océano", "/css/themes/ocean.css");
+        DARK("Oscuro", "/css/themes/dark.css");
 
         private final String displayName;
         private final String cssPath;
