@@ -37,6 +37,7 @@ public class MainController implements Initializable {
     @FXML private TextField searchField;
     @FXML private Label searchResultsLabel;
     @FXML private TableView<PasswordEntryDTO> passwordTable;
+    @FXML private TableColumn<PasswordEntryDTO, Void> favoriteColumn;
     @FXML private TableColumn<PasswordEntryDTO, String> titleColumn;
     @FXML private TableColumn<PasswordEntryDTO, String> usernameColumn;
     @FXML private TableColumn<PasswordEntryDTO, String> emailColumn;
@@ -44,6 +45,7 @@ public class MainController implements Initializable {
     @FXML private TableColumn<PasswordEntryDTO, Void> actionsColumn;
     @FXML private VBox categoriesContainer;
     @FXML private Button allCategoriesBtn;
+    @FXML private Button favoritesBtn;
     @FXML private Label currentUserLabel;
     @FXML private Label userInitialsLabel;
     @FXML private VBox sidebar;
@@ -65,6 +67,8 @@ public class MainController implements Initializable {
     private final com.passmanager.service.InactivityService inactivityService;
     private final com.passmanager.service.LockService lockService;
     private final ThemeService themeService;
+    private final com.passmanager.service.AuditLogService auditLogService;
+    private final com.passmanager.service.UserService userService;
 
     private ObservableList<PasswordEntryDTO> passwordList = FXCollections.observableArrayList();
     private List<PasswordEntryDTO> allPasswords = new ArrayList<>();
@@ -81,7 +85,9 @@ public class MainController implements Initializable {
                           FxmlLoaderUtil fxmlLoaderUtil,
                           com.passmanager.service.InactivityService inactivityService,
                           com.passmanager.service.LockService lockService,
-                          ThemeService themeService) {
+                          ThemeService themeService,
+                          com.passmanager.service.AuditLogService auditLogService,
+                          com.passmanager.service.UserService userService) {
         this.passwordEntryService = passwordEntryService;
         this.categoryService = categoryService;
         this.authService = authService;
@@ -91,6 +97,8 @@ public class MainController implements Initializable {
         this.inactivityService = inactivityService;
         this.lockService = lockService;
         this.themeService = themeService;
+        this.auditLogService = auditLogService;
+        this.userService = userService;
     }
 
     @Override
@@ -127,12 +135,53 @@ public class MainController implements Initializable {
         passwordTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
         // Solo minWidth para evitar que se hagan muy pequeñas
+        favoriteColumn.setMinWidth(40);
+        favoriteColumn.setMaxWidth(40);
+        favoriteColumn.setResizable(false);
         titleColumn.setMinWidth(100);
         usernameColumn.setMinWidth(80);
         emailColumn.setMinWidth(120);
         categoryColumn.setMinWidth(80);
         actionsColumn.setMinWidth(180);
         actionsColumn.setPrefWidth(200);
+
+        // Columna de favoritos
+        favoriteColumn.setCellFactory(param -> new TableCell<>() {
+            private final Button favoriteBtn = new Button();
+
+            {
+                favoriteBtn.getStyleClass().add("favorite-btn");
+                favoriteBtn.setOnAction(event -> {
+                    PasswordEntryDTO entry = getTableView().getItems().get(getIndex());
+                    toggleFavorite(entry);
+                });
+            }
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() >= getTableView().getItems().size()) {
+                    setGraphic(null);
+                } else {
+                    PasswordEntryDTO entry = getTableView().getItems().get(getIndex());
+                    boolean isFavorite = Boolean.TRUE.equals(entry.getFavorite());
+
+                    // Configurar texto y estilo
+                    favoriteBtn.setText(isFavorite ? "⭐" : "☆");
+
+                    // Aplicar color según estado
+                    if (isFavorite) {
+                        favoriteBtn.setStyle("-fx-text-fill: #fbbf24;"); // Dorado para favoritos
+                        favoriteBtn.setTooltip(new Tooltip("Quitar de favoritos"));
+                    } else {
+                        favoriteBtn.setStyle("-fx-text-fill: #cbd5e1;"); // Gris claro para no favoritos
+                        favoriteBtn.setTooltip(new Tooltip("Agregar a favoritos"));
+                    }
+
+                    setGraphic(favoriteBtn);
+                }
+            }
+        });
 
         titleColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getTitle()));
         usernameColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getUsername()));
@@ -171,6 +220,13 @@ public class MainController implements Initializable {
                     PasswordEntryDTO entry = getTableView().getItems().get(getIndex());
                     clipboardUtil.copyToClipboardWithAutoClear(entry.getPassword());
                     showNotification("Contraseña copiada (se borrará en " + clipboardUtil.getClearDelaySeconds() + "s)");
+
+                    // Registrar copia de contraseña
+                    auditLogService.log(userService.getCurrentUser(),
+                            com.passmanager.model.entity.AuditLog.ActionType.COPY_PASSWORD,
+                            "Copiada contraseña: " + entry.getTitle(),
+                            entry.getId(),
+                            com.passmanager.model.entity.AuditLog.ResultType.SUCCESS);
                 });
 
                 editBtn.setOnAction(event -> {
@@ -1058,6 +1114,9 @@ public class MainController implements Initializable {
                 // Detener actualización visual del contador
                 stopLockTimerUpdater();
 
+                // Cerrar todas las ventanas secundarias abiertas (diálogos, formularios, etc.)
+                closeAllSecondaryWindows();
+
                 // Almacenar referencia al stage ANTES de cambiar la escena
                 primaryStage = (Stage) passwordTable.getScene().getWindow();
 
@@ -1148,6 +1207,41 @@ public class MainController implements Initializable {
      * Limpia datos sensibles de memoria antes de bloquear.
      * Previene que contraseñas queden en memoria mientras está bloqueada.
      */
+    /**
+     * Cierra todas las ventanas secundarias abiertas (diálogos, formularios, etc.)
+     * excepto la ventana principal.
+     * Se llama al bloquear la aplicación para evitar que queden ventanas abiertas.
+     */
+    private void closeAllSecondaryWindows() {
+        try {
+            // Obtener la ventana principal
+            javafx.stage.Window mainWindow = passwordTable.getScene().getWindow();
+
+            // Obtener todas las ventanas abiertas
+            java.util.List<javafx.stage.Window> windowsToClose = new java.util.ArrayList<>();
+            for (javafx.stage.Window window : javafx.stage.Window.getWindows()) {
+                // Cerrar todas excepto la ventana principal
+                if (window != mainWindow && window.isShowing()) {
+                    windowsToClose.add(window);
+                }
+            }
+
+            // Cerrar las ventanas en una lista separada para evitar ConcurrentModificationException
+            for (javafx.stage.Window window : windowsToClose) {
+                if (window instanceof javafx.stage.Stage) {
+                    ((javafx.stage.Stage) window).close();
+                } else {
+                    window.hide();
+                }
+            }
+
+            System.out.println("Cerradas " + windowsToClose.size() + " ventanas secundarias");
+        } catch (Exception e) {
+            System.err.println("Error al cerrar ventanas secundarias: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
     private void clearSensitiveData() {
         try {
             // Limpiar tabla de contraseñas (usar setItems para evitar problemas con listas inmutables)
@@ -1179,6 +1273,93 @@ public class MainController implements Initializable {
             System.out.println("Datos sensibles limpiados de memoria");
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    @FXML
+    private void handleShowFavorites() {
+        selectedCategoryId = null;
+        // Limpiar selección de categorías
+        allCategoriesBtn.getStyleClass().remove("category-item-selected");
+        categoriesContainer.getChildren().forEach(node -> {
+            if (node instanceof HBox) {
+                ((HBox) node).getChildren().forEach(child -> {
+                    if (child instanceof Button) {
+                        child.getStyleClass().remove("category-item-selected");
+                    }
+                });
+            } else if (node instanceof Button) {
+                node.getStyleClass().remove("category-item-selected");
+            }
+        });
+        favoritesBtn.getStyleClass().add("category-item-selected");
+        searchField.clear();
+
+        allPasswords = passwordEntryService.findFavorites();
+
+        // Actualizar paginación
+        int pageCount = (int) Math.ceil((double) allPasswords.size() / ITEMS_PER_PAGE);
+        pagination.setPageCount(Math.max(1, pageCount));
+
+        int currentPage = pagination.getCurrentPageIndex();
+        if (currentPage == 0) {
+            createPage(0);
+        } else {
+            pagination.setCurrentPageIndex(0);
+        }
+    }
+
+    private void toggleFavorite(PasswordEntryDTO entry) {
+        passwordEntryService.toggleFavorite(entry.getId());
+        loadPasswords();
+    }
+
+    @FXML
+    private void handleManageTags() {
+        try {
+            FXMLLoader loader = fxmlLoaderUtil.getLoader("/fxml/tag-manager.fxml");
+            Parent root = loader.load();
+
+            Stage stage = new Stage();
+            stage.setTitle("Gestionar Tags");
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.initOwner(passwordTable.getScene().getWindow());
+
+            Scene scene = new Scene(root);
+            themeService.applyToScene(scene);
+            attachActivityListeners(scene);
+            stage.setScene(scene);
+
+            stage.showAndWait();
+            loadPasswords();
+        } catch (Exception e) {
+            e.printStackTrace();
+            dialogUtil.showErrorDialog(passwordTable.getScene().getWindow(), "Error", "No se pudo abrir el gestor de tags: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleViewAuditLog() {
+        try {
+            FXMLLoader loader = fxmlLoaderUtil.getLoader("/fxml/audit-log.fxml");
+            Parent root = loader.load();
+
+            Stage stage = new Stage();
+            stage.setTitle("Registro de Auditoría");
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.initOwner(passwordTable.getScene().getWindow());
+
+            Scene scene = new Scene(root);
+            themeService.applyToScene(scene);
+            attachActivityListeners(scene);
+            stage.setScene(scene);
+            stage.setWidth(900);
+            stage.setHeight(600);
+
+            stage.showAndWait();
+        } catch (Exception e) {
+            e.printStackTrace();
+            dialogUtil.showErrorDialog(passwordTable.getScene().getWindow(), "Error", "No se pudo abrir el registro de auditoría: " + e.getMessage());
         }
     }
 }

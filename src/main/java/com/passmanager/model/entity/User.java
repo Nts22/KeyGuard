@@ -41,6 +41,14 @@ public class User {
     @Column
     private Integer keyVersion;
 
+    /**
+     * Secret TOTP cifrado para autenticación de dos factores (2FA).
+     * Si es null, 2FA no está habilitado para este usuario.
+     * Formato: Base32-encoded secret (compatible con Google Authenticator, Authy, etc.)
+     */
+    @Column(columnDefinition = "TEXT")
+    private String totpSecret;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<PasswordEntry> passwordEntries = new ArrayList<>();
@@ -48,6 +56,14 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<Category> categories = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<Tag> tags = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<AuditLog> auditLogs = new ArrayList<>();
 
     @Convert(converter = LocalDateTimeConverter.class)
     @Column(updatable = false, columnDefinition = "TEXT")

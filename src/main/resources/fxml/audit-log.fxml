@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.passmanager.controller.AuditLogController"
+      prefWidth="900" prefHeight="600"
+      styleClass="dialog-container"
+      spacing="15">
+
+    <padding>
+        <Insets topRightBottomLeft="20"/>
+    </padding>
+
+    <!-- Título y filtro -->
+    <HBox alignment="CENTER_LEFT" spacing="20">
+        <Label text="📋 Registro de Auditoría" styleClass="dialog-title" HBox.hgrow="ALWAYS"/>
+
+        <VBox spacing="5">
+            <Label text="Filtrar:" style="-fx-font-size: 12;"/>
+            <ComboBox fx:id="filterComboBox" prefWidth="250" styleClass="filter-combo"/>
+        </VBox>
+
+        <Label fx:id="totalEntriesLabel" text="0 entradas" styleClass="info-label"/>
+    </HBox>
+
+    <!-- Tabla de registros -->
+    <TableView fx:id="auditTable" VBox.vgrow="ALWAYS" styleClass="audit-table">
+        <columns>
+            <TableColumn fx:id="timestampColumn" text="Fecha/Hora" prefWidth="150" minWidth="120"/>
+            <TableColumn fx:id="actionColumn" text="Acción" prefWidth="200" minWidth="150"/>
+            <TableColumn fx:id="resultColumn" text="Resultado" prefWidth="100" minWidth="80"/>
+            <TableColumn fx:id="descriptionColumn" text="Descripción" prefWidth="250" minWidth="150"/>
+            <TableColumn fx:id="ipAddressColumn" text="IP" prefWidth="120" minWidth="100"/>
+        </columns>
+        <placeholder>
+            <Label text="No hay registros de auditoría" style="-fx-text-fill: #94a3b8;"/>
+        </placeholder>
+    </TableView>
+
+    <!-- Paginación -->
+    <Pagination fx:id="pagination" pageCount="1"/>
+
+    <!-- Botón cerrar -->
+    <HBox alignment="CENTER_RIGHT">
+        <Button fx:id="closeBtn" text="Cerrar" onAction="#handleClose" styleClass="button-secondary"/>
+    </HBox>
+</VBox>

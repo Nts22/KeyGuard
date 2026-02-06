@@ -29,19 +29,22 @@ public class AuthServiceImpl implements AuthService {
     private final EncryptionService encryptionService;
     private final LoginAttemptService loginAttemptService;
     private final RecoveryKeyService recoveryKeyService;
+    private final com.passmanager.service.AuditLogService auditLogService;
 
     public AuthServiceImpl(UserRepository userRepository,
                            PasswordEntryRepository passwordEntryRepository,
                            UserService userService,
                            EncryptionService encryptionService,
                            LoginAttemptService loginAttemptService,
-                           RecoveryKeyService recoveryKeyService) {
+                           RecoveryKeyService recoveryKeyService,
+                           com.passmanager.service.AuditLogService auditLogService) {
         this.userRepository = userRepository;
         this.passwordEntryRepository = passwordEntryRepository;
         this.userService = userService;
         this.encryptionService = encryptionService;
         this.loginAttemptService = loginAttemptService;
         this.recoveryKeyService = recoveryKeyService;
+        this.auditLogService = auditLogService;
     }
 
     @Override
@@ -121,8 +124,20 @@ public class AuthServiceImpl implements AuthService {
             user.setLastLoginAt(LocalDateTime.now());
             userRepository.save(user);
             userService.setCurrentUser(user);
+
+            // Registrar login exitoso
+            auditLogService.log(user,
+                    com.passmanager.model.entity.AuditLog.ActionType.LOGIN,
+                    "Inicio de sesión exitoso",
+                    com.passmanager.model.entity.AuditLog.ResultType.SUCCESS);
         } else {
             loginAttemptService.loginFailed(username);
+
+            // Registrar intento fallido
+            auditLogService.log(user,
+                    com.passmanager.model.entity.AuditLog.ActionType.LOGIN_FAILED,
+                    "Intento de inicio de sesión fallido",
+                    com.passmanager.model.entity.AuditLog.ResultType.FAILURE);
         }
 
         return valid;

@@ -22,4 +22,19 @@ public interface PasswordEntryService {
     PasswordEntryDTO update(Long id, PasswordEntryDTO dto);
 
     void delete(Long id);
+
+    // Favoritos
+    List<PasswordEntryDTO> findFavorites();
+
+    void toggleFavorite(Long id);
+
+    // Tags
+    List<PasswordEntryDTO> findByTag(Long tagId);
+
+    void addTagToEntry(Long entryId, Long tagId);
+
+    void removeTagFromEntry(Long entryId, Long tagId);
+
+    // Contraseñas antiguas (para warnings)
+    List<PasswordEntryDTO> findOldPasswords(int daysThreshold);
 }

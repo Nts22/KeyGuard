@@ -1,6 +1,8 @@
 package com.passmanager.controller;
 
+import com.passmanager.service.AuditLogService;
 import com.passmanager.service.BackupService;
+import com.passmanager.service.UserService;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
@@ -54,12 +56,16 @@ public class ExportDialogController implements Initializable {
     @FXML private Label errorLabel;
 
     private final BackupService backupService;
+    private final AuditLogService auditLogService;
+    private final UserService userService;
     private Stage dialogStage;
     private boolean passwordVisible = false;
     private boolean confirmVisible = false;
 
-    public ExportDialogController(BackupService backupService) {
+    public ExportDialogController(BackupService backupService, AuditLogService auditLogService, UserService userService) {
         this.backupService = backupService;
+        this.auditLogService = auditLogService;
+        this.userService = userService;
     }
 
     @Override
@@ -220,6 +226,12 @@ public class ExportDialogController implements Initializable {
         try {
             backupService.exportPasswords(password, outputFile);
 
+            // Registrar en auditoría
+            auditLogService.log(userService.getCurrentUser(),
+                    com.passmanager.model.entity.AuditLog.ActionType.EXPORT_VAULT,
+                    "Exportación de contraseñas: " + outputFile.getName(),
+                    com.passmanager.model.entity.AuditLog.ResultType.SUCCESS);
+
             // Mensaje de éxito
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Exportación Exitosa");
@@ -235,6 +247,12 @@ public class ExportDialogController implements Initializable {
             dialogStage.close();
 
         } catch (BackupService.BackupException e) {
+            // Registrar fallo en auditoría
+            auditLogService.log(userService.getCurrentUser(),
+                    com.passmanager.model.entity.AuditLog.ActionType.EXPORT_VAULT,
+                    "Fallo al exportar: " + e.getMessage(),
+                    com.passmanager.model.entity.AuditLog.ResultType.FAILURE);
+
             showError("Error al exportar: " + e.getMessage());
         }
     }

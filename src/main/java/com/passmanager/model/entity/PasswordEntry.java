@@ -41,6 +41,14 @@ public class PasswordEntry {
     @Column(columnDefinition = "TEXT")
     private String hmacTag;
 
+    @Column
+    @Builder.Default
+    private Boolean favorite = false;
+
+    @Convert(converter = LocalDateTimeConverter.class)
+    @Column(columnDefinition = "TEXT")
+    private LocalDateTime passwordLastChanged;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -57,6 +65,15 @@ public class PasswordEntry {
     @OrderBy("changedAt DESC")
     @Builder.Default
     private List<PasswordHistory> passwordHistory = new ArrayList<>();
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "password_entry_tags",
+        joinColumns = @JoinColumn(name = "password_entry_id"),
+        inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    @Builder.Default
+    private List<Tag> tags = new ArrayList<>();
 
     @Convert(converter = LocalDateTimeConverter.class)
     @Column(updatable = false, columnDefinition = "TEXT")

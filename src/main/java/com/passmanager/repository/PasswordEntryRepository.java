@@ -2,12 +2,14 @@ package com.passmanager.repository;
 
 import com.passmanager.model.entity.Category;
 import com.passmanager.model.entity.PasswordEntry;
+import com.passmanager.model.entity.Tag;
 import com.passmanager.model.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,13 +23,17 @@ public interface PasswordEntryRepository extends JpaRepository<PasswordEntry, Lo
     @Query("SELECT p FROM PasswordEntry p WHERE p.user = :user AND " +
             "(LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
             "LOWER(p.username) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "LOWER(p.email) LIKE LOWER(CONCAT('%', :search, '%')))")
+            "LOWER(p.email) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(p.url) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(p.notes) LIKE LOWER(CONCAT('%', :search, '%')))")
     List<PasswordEntry> searchByUser(@Param("user") User user, @Param("search") String search);
 
     @Query("SELECT p FROM PasswordEntry p WHERE p.user = :user AND p.category.id = :categoryId AND " +
             "(LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
             "LOWER(p.username) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "LOWER(p.email) LIKE LOWER(CONCAT('%', :search, '%')))")
+            "LOWER(p.email) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(p.url) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(p.notes) LIKE LOWER(CONCAT('%', :search, '%')))")
     List<PasswordEntry> searchByUserAndCategory(@Param("user") User user,
                                                  @Param("categoryId") Long categoryId,
                                                  @Param("search") String search);
@@ -40,4 +46,15 @@ public interface PasswordEntryRepository extends JpaRepository<PasswordEntry, Lo
     long countByCategoryAndUser(Category category, User user);
 
     void deleteByIdAndUser(Long id, User user);
+
+    // Favoritos
+    List<PasswordEntry> findByUserAndFavoriteTrueOrderByTitleAsc(User user);
+
+    // Tags
+    @Query("SELECT p FROM PasswordEntry p JOIN p.tags t WHERE p.user = :user AND t = :tag ORDER BY p.title ASC")
+    List<PasswordEntry> findByUserAndTag(@Param("user") User user, @Param("tag") Tag tag);
+
+    // Contraseñas antiguas
+    @Query("SELECT p FROM PasswordEntry p WHERE p.user = :user AND p.passwordLastChanged < :threshold ORDER BY p.passwordLastChanged ASC")
+    List<PasswordEntry> findByUserAndPasswordLastChangedBefore(@Param("user") User user, @Param("threshold") LocalDateTime threshold);
 }

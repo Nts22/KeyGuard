@@ -25,7 +25,12 @@ public class PasswordEntryDTO {
     private Long categoryId;
     private String categoryName;
     @Builder.Default
+    private Boolean favorite = false;
+    private LocalDateTime passwordLastChanged;
+    @Builder.Default
     private List<CustomFieldDTO> customFields = new ArrayList<>();
+    @Builder.Default
+    private List<TagDTO> tags = new ArrayList<>();
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -38,5 +43,15 @@ public class PasswordEntryDTO {
         private String fieldName;
         private String fieldValue;
         private boolean sensitive;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class TagDTO {
+        private Long id;
+        private String name;
+        private String color;
     }
 }

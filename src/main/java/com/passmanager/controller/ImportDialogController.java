@@ -1,6 +1,8 @@
 package com.passmanager.controller;
 
+import com.passmanager.service.AuditLogService;
 import com.passmanager.service.BackupService;
+import com.passmanager.service.UserService;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
@@ -65,12 +67,16 @@ public class ImportDialogController implements Initializable {
     @FXML private Button importButton;
 
     private final BackupService backupService;
+    private final AuditLogService auditLogService;
+    private final UserService userService;
     private Stage dialogStage;
     private boolean passwordVisible = false;
     private Runnable onImportCallback;
 
-    public ImportDialogController(BackupService backupService) {
+    public ImportDialogController(BackupService backupService, AuditLogService auditLogService, UserService userService) {
         this.backupService = backupService;
+        this.auditLogService = auditLogService;
+        this.userService = userService;
     }
 
     @Override
@@ -247,6 +253,15 @@ public class ImportDialogController implements Initializable {
         try {
             BackupService.ImportResult result = backupService.importPasswords(password, inputFile, replaceExisting);
 
+            // Registrar en auditoría
+            String auditDescription = String.format("Importación de contraseñas: %s (%d importadas, %d omitidas)",
+                    inputFile.getName(), result.getImportedEntries(), result.getSkippedEntries());
+            auditLogService.log(userService.getCurrentUser(),
+                    com.passmanager.model.entity.AuditLog.ActionType.IMPORT_VAULT,
+                    auditDescription,
+                    result.hasErrors() ? com.passmanager.model.entity.AuditLog.ResultType.FAILURE
+                                      : com.passmanager.model.entity.AuditLog.ResultType.SUCCESS);
+
             // Mostrar resultado
             Alert resultAlert = new Alert(Alert.AlertType.INFORMATION);
             resultAlert.setTitle("Importación Completada");
@@ -278,6 +293,12 @@ public class ImportDialogController implements Initializable {
             dialogStage.close();
 
         } catch (BackupService.BackupException e) {
+            // Registrar fallo en auditoría
+            auditLogService.log(userService.getCurrentUser(),
+                    com.passmanager.model.entity.AuditLog.ActionType.IMPORT_VAULT,
+                    "Fallo al importar: " + e.getMessage(),
+                    com.passmanager.model.entity.AuditLog.ResultType.FAILURE);
+
             e.printStackTrace();
             showError("Error al importar: " + e.getMessage());
         }

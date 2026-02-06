@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.passmanager.controller.TagManagerController"
+      prefWidth="600" prefHeight="500"
+      styleClass="dialog-container"
+      spacing="20">
+
+    <padding>
+        <Insets topRightBottomLeft="30"/>
+    </padding>
+
+    <!-- Título -->
+    <Label text="🏷️ Gestionar Tags" styleClass="dialog-title"/>
+
+    <!-- Contenido principal con split -->
+    <HBox VBox.vgrow="ALWAYS" spacing="20">
+        <!-- Lista de tags existentes -->
+        <VBox spacing="10" HBox.hgrow="ALWAYS">
+            <Label text="Tags existentes" styleClass="section-label"/>
+            <ListView fx:id="tagListView" VBox.vgrow="ALWAYS" styleClass="tag-list"/>
+        </VBox>
+
+        <!-- Formulario para crear/editar tag -->
+        <VBox spacing="15" prefWidth="250" styleClass="form-container">
+            <Label text="Crear/Editar Tag" styleClass="section-label"/>
+
+            <VBox spacing="8">
+                <Label text="Nombre del tag"/>
+                <TextField fx:id="tagNameField" promptText="Ej: Trabajo"/>
+            </VBox>
+
+            <VBox spacing="8">
+                <Label text="Color"/>
+                <ColorPicker fx:id="colorPicker" maxWidth="Infinity">
+                    <value>
+                        <javafx.scene.paint.Color blue="0.965" green="0.51" red="0.231"/>
+                    </value>
+                </ColorPicker>
+            </VBox>
+
+            <VBox spacing="8">
+                <Button fx:id="addTagBtn" text="Agregar Tag" onAction="#handleAddTag"
+                        styleClass="button-primary" maxWidth="Infinity"/>
+                <Button fx:id="updateTagBtn" text="Actualizar Tag" onAction="#handleUpdateTag"
+                        styleClass="button-secondary" maxWidth="Infinity"/>
+                <Button fx:id="deleteTagBtn" text="Eliminar Tag" onAction="#handleDeleteTag"
+                        styleClass="button-danger" maxWidth="Infinity"/>
+            </VBox>
+        </VBox>
+    </HBox>
+
+    <!-- Botones de acción -->
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button fx:id="closeBtn" text="Cerrar" onAction="#handleClose" styleClass="button-secondary"/>
+    </HBox>
+</VBox>

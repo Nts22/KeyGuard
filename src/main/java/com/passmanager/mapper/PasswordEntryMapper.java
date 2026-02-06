@@ -42,6 +42,13 @@ public class PasswordEntryMapper {
                     .toList();
         }
 
+        List<PasswordEntryDTO.TagDTO> tagDTOs = new ArrayList<>();
+        if (entry.getTags() != null) {
+            tagDTOs = entry.getTags().stream()
+                    .map(this::toTagDTO)
+                    .toList();
+        }
+
         return PasswordEntryDTO.builder()
                 .id(entry.getId())
                 .title(entry.getTitle())
@@ -52,7 +59,10 @@ public class PasswordEntryMapper {
                 .notes(entry.getNotes())
                 .categoryId(entry.getCategory() != null ? entry.getCategory().getId() : null)
                 .categoryName(entry.getCategory() != null ? entry.getCategory().getName() : null)
+                .favorite(entry.getFavorite())
+                .passwordLastChanged(entry.getPasswordLastChanged())
                 .customFields(customFieldDTOs)
+                .tags(tagDTOs)
                 .createdAt(entry.getCreatedAt())
                 .updatedAt(entry.getUpdatedAt())
                 .build();
@@ -62,10 +72,20 @@ public class PasswordEntryMapper {
         entry.setTitle(dto.getTitle());
         entry.setUsername(dto.getUsername());
         entry.setEmail(dto.getEmail());
-        entry.setPassword(encryptionService.encrypt(dto.getPassword()));
-        entry.setHmacTag(encryptionService.sign(entry.getPassword()));
+
+        // Actualizar contraseña y fecha de último cambio si cambió la contraseña
+        String oldEncryptedPassword = entry.getPassword();
+        String newEncryptedPassword = encryptionService.encrypt(dto.getPassword());
+
+        if (oldEncryptedPassword == null || !oldEncryptedPassword.equals(newEncryptedPassword)) {
+            entry.setPassword(newEncryptedPassword);
+            entry.setHmacTag(encryptionService.sign(newEncryptedPassword));
+            entry.setPasswordLastChanged(java.time.LocalDateTime.now());
+        }
+
         entry.setUrl(dto.getUrl());
         entry.setNotes(dto.getNotes());
+        entry.setFavorite(dto.getFavorite());
 
         if (dto.getCategoryId() != null) {
             Category category = categoryRepository.findById(dto.getCategoryId())
@@ -128,5 +148,13 @@ public class PasswordEntryMapper {
             log.warn("Error al desencriptar campo: {}", e.getMessage());
             return DECRYPTION_ERROR;
         }
+    }
+
+    private PasswordEntryDTO.TagDTO toTagDTO(com.passmanager.model.entity.Tag tag) {
+        return PasswordEntryDTO.TagDTO.builder()
+                .id(tag.getId())
+                .name(tag.getName())
+                .color(tag.getColor())
+                .build();
     }
 }

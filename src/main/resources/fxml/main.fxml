@@ -42,6 +42,12 @@
                                 styleClass="category-item, category-item-selected"
                                 onAction="#handleAllCategories" maxWidth="Infinity"/>
 
+                        <Button fx:id="favoritesBtn" text="⭐ Favoritas"
+                                styleClass="category-item"
+                                onAction="#handleShowFavorites" maxWidth="Infinity"/>
+
+                        <Separator style="-fx-background-color: rgba(148, 163, 184, 0.15); -fx-padding: 4 0;"/>
+
                         <VBox fx:id="categoriesContainer" spacing="0">
                             <!-- Las categorías se cargan dinámicamente -->
                         </VBox>
@@ -61,6 +67,12 @@
                 <VBox styleClass="security-actions-group" spacing="0">
                     <Button text="🔍 Verificar Contraseñas" styleClass="security-action-item"
                             onAction="#handleCheckBreaches" maxWidth="Infinity"/>
+
+                    <Button text="🏷️ Gestionar Tags" styleClass="security-action-item"
+                            onAction="#handleManageTags" maxWidth="Infinity"/>
+
+                    <Button text="📋 Registro de Auditoría" styleClass="security-action-item"
+                            onAction="#handleViewAuditLog" maxWidth="Infinity"/>
 
                     <Button text="💾 Exportar Contraseñas" styleClass="security-action-item"
                             onAction="#handleExport" maxWidth="Infinity"/>
@@ -140,6 +152,7 @@
             <!-- Tabla de contraseñas - altura fija para 20 filas -->
             <TableView fx:id="passwordTable" prefHeight="720" minHeight="720" maxHeight="720" fixedCellSize="30">
                 <columns>
+                    <TableColumn fx:id="favoriteColumn" text="⭐" minWidth="40" maxWidth="40"/>
                     <TableColumn fx:id="titleColumn" text="Título"/>
                     <TableColumn fx:id="usernameColumn" text="Usuario"/>
                     <TableColumn fx:id="emailColumn" text="Email"/>
